@@ -6,7 +6,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 
 public class GameControl : MonoBehaviour {
-
+    public int lives;
+    public bool dash;
+    public bool shoot;
     public static GameControl control;
 
 	// Use this for initialization
@@ -25,6 +27,9 @@ public class GameControl : MonoBehaviour {
 	void Start () {
 
         //init
+        lives = 3;
+        dash = false;
+        shoot = false;
         Load();
 	}
 	
@@ -44,6 +49,10 @@ public class GameControl : MonoBehaviour {
             file.Close();
 
             //loading goes here
+            lives = data.lives;
+            shoot = data.shoot;
+            dash = data.dash;
+
         }
     }
 
@@ -54,7 +63,9 @@ public class GameControl : MonoBehaviour {
         FileStream file = File.Create(Application.persistentDataPath + "/saveData.dat");
 
         UserData data= new UserData();
-
+        data.lives = lives;
+        data.shoot = shoot;
+        data.dash = dash;
         //saving goes here
 
         bf.Serialize(file, data);
@@ -66,5 +77,7 @@ public class GameControl : MonoBehaviour {
 [Serializable]
 class UserData
 {
-
+    public int lives = 0;
+    public bool dash = false;
+    public bool shoot = false;
 }

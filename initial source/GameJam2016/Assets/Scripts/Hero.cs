@@ -3,38 +3,162 @@ using System.Collections;
 using System.Collections.Generic;
 
 public enum HeroState { IDLE, WALKING, JUMPING, DASHING, AIR_DASHING, SHOOTING };
+public enum DamageState { HEALTHY, STUNNED, DEAD };
 public class Hero : MonoBehaviour {
-    public GameObject hero;
-    public Vector3 forward;
-    HeroState state = HeroState.IDLE;
-    bool onFloor;
+    public float hp;
+    public WeaponState weaponState;
+    public Vector3 hmdForward;
     public Vector3 facing;
+    public DamageState damageState = DamageState.HEALTHY;
+    public GameObject cameraRig;
+
+    HeroState state = HeroState.IDLE;
+
+    float dashDuration = 0.5f;
+    float dashAge = 0f;
+    public bool dashAllowed;
+    float stunCooldown = 2f;
+    float stunAge = 0f;
+    
+    Vector3 spawnPoint;
+    
+
+    Object bulletObject;
+    float speed;
+    bool onFloor;
+
+    Guage health;
+    public Weapon weapon;
+    
+    
+    bool lockToTarget;
+    GameObject lockedObject;
+
 
     List<GameObject> platforms = new List<GameObject>();
     List<GameObject> bullets = new List<GameObject>();
-    Object bulletObject;
-    float speed;
+    List<GameObject> targets = new List<GameObject>();
+
     
-
-    Vector3 lastVelocity;
-
-    float lastRT;
 	// Use this for initialization
 	void Start () {
+        lockToTarget = false;
         facing = new Vector3(0, 0, 1);
-        speed = 0.1f;
+        speed = 0.2f;
+        //hp
+        health = new Guage();
+        spawnPoint = gameObject.transform.position;
+        dashAllowed = false;
         
+        weapon = new Weapon();
+        weapon.state = WeaponState.GUN;
+        weapon.damage = 40f;
+
         Physics.gravity = new Vector3(0, -50, 0);
         bulletObject = Resources.Load("Projectile", typeof(GameObject));
 
-        platforms.Add(GameObject.Find("Gun_Barrel"));
-        platforms.Add(GameObject.Find("platform"));
-        platforms.Add(GameObject.Find("platform (1)"));
-        platforms.Add(GameObject.Find("platform (2)"));
-        platforms.Add(GameObject.Find("platform (3)"));
-        platforms.Add(GameObject.Find("platform (4)"));
+        AddPlatform(GameObject.Find("platform"));
+        AddPlatform(GameObject.Find("Plane"));
+        AddPlatform(GameObject.Find("platform (1)"));
+        AddPlatform(GameObject.Find("platform (2)"));
+        AddPlatform(GameObject.Find("platform (3)"));
+        AddPlatform(GameObject.Find("platform (4)"));
+        AddPlatform(GameObject.Find("level_one_piece01_start"));
+        AddPlatform(GameObject.Find("level_one_piece02_mid"));
+        AddPlatform(GameObject.Find("level_one_piece03_end"));
+        AddPlatform(GameObject.Find("Nudger A"));
+        AddPlatform(GameObject.Find("Nudger B"));
+        AddPlatform(GameObject.Find("Nudger C"));
+
+        AddTarget(GameObject.Find("Enemy"));
+        AddTarget(GameObject.Find("Pit"));
+        AddTarget(GameObject.Find("Target"));
+        AddTarget(GameObject.Find("Target (1)"));
+        AddTarget(GameObject.Find("Target (2)"));
+        AddTarget(GameObject.Find("Target (3)"));
+        AddTarget(GameObject.Find("Target (4)"));
+        AddTarget(GameObject.Find("Target (5)"));
+        AddTarget(GameObject.Find("Target (6)"));
+        AddTarget(GameObject.Find("Target (7)"));
+        AddTarget(GameObject.Find("Target (8)"));
+        AddTarget(GameObject.Find("Target (9)"));
+        AddTarget(GameObject.Find("Target (10)"));
+
+        AddTarget(GameObject.Find("Turret"));
+        AddTarget(GameObject.Find("Turret (1)"));
+        AddTarget(GameObject.Find("Turret (2)"));
+
+
+    }
+    void AddTarget(GameObject t)
+    {
+        if (t != null) targets.Add(t);
+    }
+    void AddPlatform(GameObject platform)
+    {
+        if(platform!=null) platforms.Add(platform);
     }
 
+    void TakeDamage(float dmg)
+    {
+        health.value -= dmg;
+        if (health.value < 0)
+        {
+            damageState = DamageState.DEAD;
+            GameControl.control.lives--;
+            if (GameControl.control.lives == 0)
+            {
+                //game over
+
+            }
+            else
+            {
+                //goto spawn point
+                gameObject.transform.position = spawnPoint;
+                health.value = 100f;
+                damageState = DamageState.STUNNED;
+                stunAge = stunCooldown;
+            }
+        }
+        else
+        {
+            damageState = DamageState.STUNNED;
+            stunAge = stunCooldown;
+        }
+
+    }
+    void OnTriggerStay(Collider other)
+    {
+
+        if (other.gameObject.layer == LayerMask.NameToLayer("Targets"))
+        {
+            if (state == HeroState.DASHING)
+            {
+                //crash attack
+                other.gameObject.GetComponent<Enemy>().Explode();
+                dashAllowed = true;
+            }
+            else {
+                if (stunAge <= 0f)
+                {
+                    if (other.gameObject.GetComponent<Enemy>().baseDamage > 0f)
+                    {
+                        TakeDamage(other.gameObject.GetComponent<Enemy>().baseDamage);
+                    }
+                }
+            }
+        }
+
+        if (other.gameObject.name== "Turret Projectile")
+        {
+            TakeDamage(other.gameObject.GetComponent<Projectile>().weapon.damage);
+        }
+        if (other.gameObject.name == "Pit")
+        {
+            
+            TakeDamage(other.gameObject.GetComponent<Enemy>().baseDamage);
+        }
+    }
     void OnCollisionEnter(Collision col)
     {
         if (col.gameObject.name == "Terrain")
@@ -42,126 +166,276 @@ public class Hero : MonoBehaviour {
             //Debug.Log("on terrain");
             state = HeroState.IDLE;
             onFloor = true;
+            dashAllowed = true;
         }
+        
         else
         {
-            for(int i = 0; i < platforms.Count; i++)
+            for (int i = 0; i < platforms.Count; i++)
             {
+                //Debug.Log(col.gameObject.name);
+                
                 if(col.gameObject.name == platforms[i].name)
                 {
                     state = HeroState.IDLE;
                     onFloor = true;
+                    dashAllowed = true;
                     break;
                 }
+            
             }
         }
     }
 
+
+    void SetMeshRendererEnabled(GameObject go,bool enabled)
+    {
+        if (go.GetComponent<MeshRenderer>() != null)
+        {
+            go.GetComponent<MeshRenderer>().enabled = enabled;
+        }
+        foreach(Transform child in go.transform)
+        {
+            SetMeshRendererEnabled(child.gameObject, enabled);
+        }
+    }
     // Update is called once per frame
     void Update() {
+        //Debug.Log(state);
 
-        forward = Camera.main.transform.forward;
-        forward.y = 0f;
-        forward.Normalize();
+        //update viewers
+        hp = health.value;
+        weaponState = weapon.state;
 
-
-
-        Vector3 movement = new Vector3(-Input.GetAxisRaw("LeftJoystickX"), 0, Input.GetAxisRaw("LeftJoystickY"));
-        //Debug.Log(movement);
-        movement.Normalize();
-        movement = Quaternion.Euler(0, 180, 0) * movement;
+        hmdForward = Camera.main.transform.forward;
+        hmdForward.y = 0f;
+        hmdForward.Normalize();
 
 
 
-        float theta = Vector3.Angle(Vector3.forward, forward);
-        theta *= Mathf.Sign(Vector3.Cross(Vector3.forward, forward).y);
-
-
-        if (movement.magnitude != 0f)
+        //blink stunned hero
+        if (damageState == DamageState.STUNNED)
         {
-
-            movement = Quaternion.Euler(0, theta, 0) * movement;
-
-            hero.transform.position += movement * speed;
-            state = HeroState.WALKING;
-            facing = movement;
-
-
-
-        }
-        else
-        {
-            if (state == HeroState.WALKING)
+            SetMeshRendererEnabled(gameObject,!GetComponent<MeshRenderer>().enabled);
+            stunAge -= Time.deltaTime;
+            if (stunAge <= 0f)
             {
-                state = HeroState.IDLE;
+                damageState = DamageState.HEALTHY;
+                SetMeshRendererEnabled(gameObject, true);
             }
         }
 
+
+        //turn physics back on
+        if (gameObject.GetComponent<Rigidbody>().isKinematic) {
+            gameObject.GetComponent<Rigidbody>().isKinematic = false;
+        }
+
+
+        switch (state)
+        {
+            case HeroState.DASHING:
+
+                dashAge += Time.deltaTime;
+                if (dashAge >= dashDuration)
+                {
+                    //state = HeroState.JUMPING;
+                    state = HeroState.IDLE;
+                    gameObject.GetComponent<Rigidbody>().isKinematic = true;
+                    gameObject.GetComponent<Rigidbody>().useGravity = true;
+                }
+                break;
+            
+            default:
+                gameObject.GetComponent<Rigidbody>().useGravity = true;
+                break;
+        }
+
+        //controller movement
+        Vector3 movement = new Vector3(-Input.GetAxisRaw("LeftJoystickX"), 0, Input.GetAxisRaw("LeftJoystickY"));
+        Vector3 movementUnit = movement.normalized;
+        movementUnit = Quaternion.Euler(0, 180, 0) * movementUnit;
+
+        float theta = Vector3.Angle(Vector3.forward, hmdForward);
+        theta *= Mathf.Sign(Vector3.Cross(Vector3.forward, hmdForward).y);
+
+        if (state != HeroState.DASHING)
+        {
+            if (movement.magnitude != 0f)
+            {
+                movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
+                gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
+                
+                state = HeroState.WALKING;
+                if (!lockToTarget)
+                {
+                    facing = movementUnit;
+                }
+            }
+            else
+            {
+                if (state == HeroState.WALKING)
+                {
+                    state = HeroState.IDLE;
+                }
+                
+            }
+        }
         
 
+        //controller rotation
         Vector3 direction = new Vector3(-Input.GetAxisRaw("RightJoystickX"), 0, Input.GetAxisRaw("RightJoystickY"));
-        //Debug.Log(movement);
-        direction.Normalize();
-        direction = Quaternion.Euler(0, 180, 0) * direction;
-
-
+        Vector3 directionUnit = direction.normalized;
+        directionUnit = Quaternion.Euler(0, 180, 0) * directionUnit;
 
         if (direction.magnitude != 0f)
         {
-
-
-            facing = Quaternion.Euler(0, theta, 0) * direction;
-
-            //facing = direction;
-        }
-
-        float lookAngle = Vector3.Angle(Vector3.forward, facing);
-        lookAngle *= Mathf.Sign(Vector3.Cross(Vector3.forward, facing).y);
-        //Debug.Log(Vector3.forward + " " + direction + " " + "ANGLE:" + lookAngle);
-        hero.transform.localEulerAngles = new Vector3(0, lookAngle, 0);
-
-        
-        if (Input.GetButtonDown("A"))
-        {
-            if ((state == HeroState.IDLE || state == HeroState.WALKING) && onFloor)
+            facing = Quaternion.Euler(0, theta, 0) * directionUnit;
+            if (!lockToTarget)
             {
-                hero.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
-                state = HeroState.JUMPING;
-                onFloor = false;
-                Debug.Log("LEAVING");
+                facing = direction;
+                //facing = direction;
             }
         }
-        /*
+        
+        facing.Normalize();
+        float facingAngle = Vector3.Angle(Vector3.forward, facing);
+        facingAngle *= Mathf.Sign(Vector3.Cross(Vector3.forward, facing).y);
+        //Debug.Log(Vector3.forward + " " + direction + " " + "ANGLE:" + lookAngle);
+        gameObject.transform.localEulerAngles = new Vector3(0, facingAngle, 0);
+
+        
+        //highlight object being looked at
+        RaycastHit hit;
+        Material whiteMat = Resources.Load("Materials/White", typeof(Material)) as Material;
+        Material greenMat = Resources.Load("Materials/Green", typeof(Material)) as Material;
+        Vector3 directionToTarget = Vector3.zero;
+
+        lockedObject = null;
+        for (int i = 0; i < targets.Count; i++)
+        {
+            if (targets[i] != null)
+            {
+                if(targets[i].GetComponent<MeshRenderer>()!=null) targets[i].GetComponent<MeshRenderer>().material = whiteMat;
+            }
+        }
+        for (int i = 0; i < targets.Count; i++)
+        {
+
+            if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, 1 << LayerMask.NameToLayer("Targets")))
+            {
+                if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)  hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat ;
+
+                lockedObject = hit.collider.gameObject;
+
+                if (lockToTarget) { 
+                    
+                    directionToTarget = hit.collider.gameObject.transform.position - gameObject.transform.position;
+                    facing = directionToTarget;
+                    float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
+                    angleToTarget *= Mathf.Sign(Vector3.Cross(Vector3.forward, directionToTarget).y);
+                    
+                    gameObject.transform.localEulerAngles = new Vector3(0, angleToTarget, 0);
+                }
+                break;
+            }
+
+        }
+
+
+        
+        //controller buttons
+        if (Input.GetButtonDown("A"))
+        {
+            if (state!=HeroState.DASHING)
+            {
+                
+                if(onFloor)
+                {
+                    gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
+                    gameObject.GetComponent<Rigidbody>().useGravity = true;
+                    state = HeroState.JUMPING;
+                    onFloor = false;
+                    dashAllowed = false;
+                    Debug.Log("LEAVING");
+                    
+                }
+                
+            }
+        }
+        else if (Input.GetButtonDown("B"))
+        {
+            if (state != HeroState.DASHING)
+            {
+                if ((lockToTarget && lockedObject != null))
+                {
+                    directionToTarget = lockedObject.transform.position - gameObject.transform.position;
+                    Debug.Log(lockedObject.transform.position + " " + gameObject.transform.position + " " + directionToTarget);
+                    directionToTarget.Normalize();
+                    gameObject.GetComponent<Rigidbody>().AddForce(directionToTarget * 20000f);
+                    gameObject.GetComponent<Rigidbody>().useGravity = false;
+                    state = HeroState.DASHING;
+                    dashAge = 0f;
+                    onFloor = false;
+                    dashAllowed = false;
+                }
+                else {
+                    facing.Normalize();
+                    gameObject.GetComponent<Rigidbody>().AddForce(facing * 20000f);
+                    gameObject.GetComponent<Rigidbody>().useGravity = false;
+                    state = HeroState.DASHING;
+                    dashAge = 0f;
+                    onFloor = false;
+                    dashAllowed = false;
+                }
+
+
+            }
+        }
+
+        if (Input.GetButtonDown("X"))
+        {
+            switch (weapon.state)
+            {
+                case WeaponState.GUN:
+                    GameObject bullet = Instantiate(bulletObject, gameObject.transform.position, Quaternion.identity) as GameObject;
+                    bullet.GetComponent<Projectile>().direction = facing;
+                    //bullet.transform.parent = hero.transform;
+                    bullet.name = "Hero Projectile";
+                    break;
+                default:
+                    break;
+            }
+        }
+
         if (Input.GetButtonDown("RB"))
         {
-
+            //gameObject.transform.position = spawnPoint;
+            cameraRig.transform.position = gameObject.transform.position - (facing * 10f);
+            cameraRig.transform.position+= new Vector3(0,10f,0f);
+            cameraRig.transform.LookAt(GameObject.Find("Focal").transform);
+            
         }
-        */
 
-        if (Input.GetAxisRaw("RT") < 0f && lastRT == 0f)
+            if (Input.GetAxisRaw("RT") < 0f)
         {
-            //down
-            GameObject bullet = Instantiate(bulletObject, gameObject.transform.position, Quaternion.identity) as GameObject;
-            bullet.GetComponent<Projectile>().direction = facing;
-            //bullet.transform.parent = hero.transform;
-            bullet.name = "Projectile";
-
+            //lock
+            lockToTarget = true;
         }
-        lastRT = Input.GetAxisRaw("RT");
-
-        if (hero.GetComponent<Rigidbody>().velocity.y == 0f)
+        else
         {
-            //Debug.Log(lastVelocity);
+            lockToTarget = false;
         }
         
-        
-        
-        lastVelocity = hero.GetComponent<Rigidbody>().velocity;
+
+        //Debug Lines
+
+
 
         //Oculus look vector
         Debug.DrawLine(Camera.main.transform.position, Camera.main.transform.position + (Camera.main.transform.forward * 100f),Color.red);
 
         //facing vector
-        Debug.DrawLine(hero.transform.position,hero.transform.position + (facing * 100f), Color.green);
+        Debug.DrawLine(gameObject.transform.position, gameObject.transform.position + (facing * 100f), Color.green);
     }
 }

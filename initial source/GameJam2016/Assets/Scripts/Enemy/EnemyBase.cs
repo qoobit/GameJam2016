@@ -50,8 +50,9 @@ public class EnemyBase : MonoBehaviour
 
     private void updatePatrol()
     {
-        float distanceRemaining = Vector3.Magnitude(agent.destination - this.transform.position) - agent.radius;
 
+        float distanceRemaining = Vector3.Magnitude(agent.destination - this.transform.position) - agent.radius;
+        
         if (distanceRemaining <= WaypointThreshold)
         {
             agent.destination = this.findRandomTargetPosition();
