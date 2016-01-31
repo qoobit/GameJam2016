@@ -1,15 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class Portal : MonoBehaviour
 {
     public string SceneName;
     public string PortalName;
 
-
+    public Vector3 direction;
     void Start()
     {
-        SceneName = PortalName = "";
+        
     }
 
     // Update is called once per frame
@@ -23,11 +24,17 @@ public class Portal : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        GameControl.control.sceneName = SceneName;
-        GameControl.control.portalName = PortalName;
-        GameControl.control.Save();
-
-        Application.LoadLevel(SceneName);
+        if (other.name == "Hero")
+        {
+            GameControl.control.sceneName = SceneName;
+            GameControl.control.portalName = PortalName;
+            GameControl.control.Save();
+            if (SceneName != "")
+            {
+                SceneManager.LoadScene(SceneName);
+            }
+        }
+        
     }
 }
 

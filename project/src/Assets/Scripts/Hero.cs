@@ -12,7 +12,7 @@ public class Hero : Damageable {
     public DamageState damageState = DamageState.HEALTHY;
     public GameObject cameraRig;
 
-    HeroState state = HeroState.IDLE;
+    public HeroState state = HeroState.IDLE;
 
     float dashDuration = 0.5f;
     float dashAge = 0f;
@@ -36,8 +36,9 @@ public class Hero : Damageable {
 	// Use this for initialization
 	void Start () {
         lockToTarget = false;
-        facing = new Vector3(0, 0, 1);
+        
         speed = 0.2f;
+
         //hp
         health = new Guage();
         spawnPoint = gameObject.transform.position;
@@ -47,9 +48,17 @@ public class Hero : Damageable {
         
         //Load a blaster as our weapon
         Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
-        GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, Quaternion.identity) as GameObject;
+        GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, this.transform.rotation) as GameObject;
         blasterWeapon.transform.parent = this.transform;
         weapon = blasterWeapon.GetComponent<Weapon>();
+
+
+
+        //initialize hero with GameControl
+        health.value = GameControl.control.health;
+
+        
+        
     }
     
 
@@ -65,35 +74,39 @@ public class Hero : Damageable {
                 dashAllowed = true;
             }
         }
+        if ( other.gameObject.layer == LayerMask.NameToLayer("Enemy"))
+        {
+            if (state == HeroState.DASHING)
+            {
+                //crash attack
+                other.gameObject.GetComponent<Damageable>().Hurt(100f, this.gameObject);
+                dashAllowed = true;
+            }
+        }
+
+
 
 
     }
     void OnCollisionEnter(Collision col)
     {
-        if (col.gameObject.name == "Terrain")
-        {
-            //Debug.Log("on terrain");
-            state = HeroState.IDLE;
-            onFloor = true;
-            dashAllowed = true;
-        }
-        
-        else
-        {
+       
+
+        if (GameControl.control.level != null) {
             for (int i = 0; i < GameControl.control.level.GetComponent<Level>().platforms.Count; i++)
             {
-                //Debug.Log(col.gameObject.name);
-                
-                if(col.gameObject.name == GameControl.control.level.GetComponent<Level>().platforms[i].name)
+                if (col.gameObject.name == GameControl.control.level.GetComponent<Level>().platforms[i].name)
                 {
                     state = HeroState.IDLE;
                     onFloor = true;
                     dashAllowed = true;
                     break;
                 }
-            
+
             }
         }
+            
+        
     }
 
 
@@ -112,6 +125,9 @@ public class Hero : Damageable {
     // Update is called once per frame
     void Update() {
         //Debug.Log(state);
+        ((Blaster)weapon).bulletReloadTime = 0.01f;
+        ((Blaster)weapon).clipReloadTime = 0f;
+        weapon.weaponFireMode = (int)BlasterMode.STRAIGHT;
 
         //update viewers
         hp = health.value;
@@ -124,7 +140,7 @@ public class Hero : Damageable {
         //blink stunned hero
         if (damageState == DamageState.STUNNED)
         {
-            SetMeshRendererEnabled(gameObject,!GetComponent<MeshRenderer>().enabled);
+            SetMeshRendererEnabled(gameObject,!gameObject.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().enabled);
             stunAge -= Time.deltaTime;
             if (stunAge <= 0f)
             {
@@ -205,53 +221,13 @@ public class Hero : Damageable {
                 //facing = direction;
             }
         }
-        
-        facing.Normalize();
-        float facingAngle = Vector3.Angle(Vector3.forward, facing);
-        facingAngle *= Mathf.Sign(Vector3.Cross(Vector3.forward, facing).y);
-        //Debug.Log(Vector3.forward + " " + direction + " " + "ANGLE:" + lookAngle);
-        gameObject.transform.localEulerAngles = new Vector3(0, facingAngle, 0);
 
-        
+        UpdateTransform();
+
+
         //highlight object being looked at
-        RaycastHit hit;
-        Material whiteMat = Resources.Load("Materials/White", typeof(Material)) as Material;
-        Material greenMat = Resources.Load("Materials/Green", typeof(Material)) as Material;
-        Vector3 directionToTarget = Vector3.zero;
 
-        lockedObject = null;
-        //reset materials to white
-        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
-        {
-            if (GameControl.control.level.GetComponent<Level>().targets[i] != null)
-            {
-                if(GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>()!=null) GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>().material = whiteMat;
-            }
-        }
-
-        //highlight
-        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
-        {
-
-            if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, 1 << LayerMask.NameToLayer("Targets")))
-            {
-                if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)  hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat ;
-
-                lockedObject = hit.collider.gameObject;
-
-                if (lockToTarget) { 
-                    
-                    directionToTarget = hit.collider.gameObject.transform.position - gameObject.transform.position;
-                    facing = directionToTarget;
-                    float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
-                    angleToTarget *= Mathf.Sign(Vector3.Cross(Vector3.forward, directionToTarget).y);
-                    
-                    gameObject.transform.localEulerAngles = new Vector3(0, angleToTarget, 0);
-                }
-                break;
-            }
-
-        }
+        Vector3 directionToTarget = HighlightTarget();
 
 
         
@@ -312,11 +288,7 @@ public class Hero : Damageable {
 
         if (Input.GetButtonDown("RB"))
         {
-            //gameObject.transform.position = spawnPoint;
-            cameraRig.transform.position = gameObject.transform.position - (facing * 10f);
-            cameraRig.transform.position+= new Vector3(0,10f,0f);
-            cameraRig.transform.LookAt(GameObject.Find("Focal").transform);
-            
+            RealignHMD();
         }
 
             if (Input.GetAxisRaw("RT") < 0f)
@@ -340,11 +312,78 @@ public class Hero : Damageable {
         //facing vector
         Debug.DrawLine(gameObject.transform.position, gameObject.transform.position + (facing * 100f), Color.green);
     }
+    public void UpdateTransform()
+    {
+        facing.Normalize();
+        float facingAngle = Vector3.Angle(Vector3.forward, facing);
+        facingAngle *= Mathf.Sign(Vector3.Cross(Vector3.forward, facing).y);
+        //Debug.Log(Vector3.forward + " " + direction + " " + "ANGLE:" + lookAngle);
+        gameObject.transform.localEulerAngles = new Vector3(0, facingAngle, 0);
+    }
+    public void RealignHMD()
+    {
+        //gameObject.transform.position = spawnPoint;
+
+        cameraRig.transform.position = gameObject.transform.position - (facing * 10f);
+        cameraRig.transform.position += new Vector3(0, 10f, 0f);
+        cameraRig.transform.LookAt(GameObject.Find("Focal").transform);
+    }
+    Vector3 HighlightTarget()
+    {
+        if (GameControl.control.level == null) return Vector3.zero;
+        RaycastHit hit;
+        Material whiteMat = Resources.Load("Materials/White", typeof(Material)) as Material;
+        Material greenMat = Resources.Load("Materials/Green", typeof(Material)) as Material;
+        Vector3 directionToTarget = Vector3.zero;
+
+        lockedObject = null;
+        //reset materials to white
+        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
+        {
+            if (GameControl.control.level.GetComponent<Level>().targets[i] != null)
+            {
+                if (GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>() != null) GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>().material = whiteMat;
+            }
+        }
+
+        //highlight
+        LayerMask layerMask = new LayerMask();
+        layerMask = (1 << LayerMask.NameToLayer("Targets"));
+        layerMask |= (1 << LayerMask.NameToLayer("Enemy"));
+        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
+        {
+
+            if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
+            {
+                if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null) hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat;
+
+                lockedObject = hit.collider.gameObject;
+
+                if (lockToTarget)
+                {
+
+                    directionToTarget = hit.collider.gameObject.transform.position - gameObject.transform.position;
+                    facing = directionToTarget;
+                    float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
+                    angleToTarget *= Mathf.Sign(Vector3.Cross(Vector3.forward, directionToTarget).y);
+
+                    gameObject.transform.localEulerAngles = new Vector3(0, angleToTarget, 0);
+                }
+                break;
+            }
+
+        }
+
+
+        return directionToTarget;
+    }
 
     override public void Hurt(float damage, GameObject attacker)
     {
         //Don't take damage if we are stunned
         if (stunAge > 0f) return;
+
+        if ((state == HeroState.DASHING || state == HeroState.AIR_DASHING) && attacker.layer == LayerMask.NameToLayer("Enemy")) return;
 
         health.value -= damage;
         if (health.value <= 0)
@@ -362,6 +401,7 @@ public class Hero : Damageable {
     {
         damageState = DamageState.DEAD;
         GameControl.control.lives--;
+        /*
         if (GameControl.control.lives == 0)
         {
             //game over
@@ -369,11 +409,15 @@ public class Hero : Damageable {
         }
         else
         {
+        */
             //goto spawn point
             gameObject.transform.position = spawnPoint;
             health.value = 100f;
             damageState = DamageState.STUNNED;
             stunAge = stunCooldown;
+            RealignHMD();
+        /*
         }
+        */
     }
 }

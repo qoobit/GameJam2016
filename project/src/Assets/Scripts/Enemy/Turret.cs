@@ -14,6 +14,7 @@ public class Turret : Enemy
     // Use this for initialization
     void Start()
     {
+        base.Start();
         head = GetComponent<EnemyHead>();
         body = this.transform.FindChild("Body");
         enemyBase = GetComponent<EnemyBase>();
@@ -33,14 +34,18 @@ public class Turret : Enemy
     // Update is called once per frame
     void Update ()
     {
-        if (head.currentState == EnemyHeadState.LOCKED)
+        base.Update();
+        if (enemyBase.CurrentState == EnemyBaseState.OFFENSE)
         {
-            isAttacking = true;
-            attack();
-        }
-        else
-        {
-            isAttacking = false;
+            if (head.currentState == EnemyHeadState.LOCKED)
+            {
+                isAttacking = true;
+                attack();
+            }
+            else
+            {
+                isAttacking = false;
+            }
         }
 
         updateAnimationStates();

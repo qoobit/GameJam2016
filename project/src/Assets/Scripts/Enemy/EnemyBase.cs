@@ -40,6 +40,11 @@ public class EnemyBase : MonoBehaviour
             this.CurrentState = EnemyBaseState.PATROL;
         }
 
+        if (GetComponent<Enemy>().guage.value <= 0f)
+        {
+            this.CurrentState = EnemyBaseState.IDLE;
+        }
+
         //Enemy State machine 
         switch (CurrentState)
         {

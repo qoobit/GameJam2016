@@ -6,19 +6,19 @@ public class Enemy : Damageable
     public float hp = 100f;
     public float baseDamage = 0f;
 
-    protected Guage guage;
+    public Guage guage;
     protected Object explosionObject;
     protected Weapon weapon;
 
     
-    void Start ()
+    protected virtual void Start ()
     {
         guage = new Guage();
         explosionObject = Resources.Load("Explosion", typeof(GameObject));
     }
-	
 
-	void Update () {
+
+    protected virtual void Update () {
         hp = guage.value;
 	}
 
@@ -42,20 +42,32 @@ public class Enemy : Damageable
     override public void Hurt(float damage, GameObject attacker)
     {
         guage.value -= damage;
-        if (hp <= 0f)
+        
+        if (guage.value <= 0f)
         {
-            Explode();
+            if (attacker.name == "Hero" && (attacker.GetComponent<Hero>().state == HeroState.DASHING|| attacker.GetComponent<Hero>().state == HeroState.AIR_DASHING))
+            {
+                Explode();
+            }
+            else
+            {
+                Die();
+            }
+            
         }
     }
 
     override public void Die()
     {
+        if(GetComponent<EnemyBase>()!=null) GetComponent<EnemyBase>().CurrentState = EnemyBaseState.IDLE;
         StartCoroutine(WaitAndExplode(0.5f));
     }
 
     protected IEnumerator WaitAndExplode(float waitTime)
     {
+        
         yield return new WaitForSeconds(waitTime);
+        
         this.Explode();
     }
 }

@@ -1,14 +1,17 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+
+public enum BlasterMode { NONE, STRAIGHT, RING }
 public class Blaster : Weapon
 {
-    private float clipReloadTime; // Time it takes to reload a clip
-    private float bulletReloadTime; // Time it takes to reload 1 bullet within a clip
+    public float clipReloadTime; // Time it takes to reload a clip
+    public float bulletReloadTime; // Time it takes to reload 1 bullet within a clip
     private int bulletCount; //Number of rounds fired this wave
     private int clipLimit; // Maximum number of rounds for this wave
     private float nextFireTime; //The earliest time we can fire the next bullet
-    private float bulletSpeed;
+    public float bulletSpeed;
+    
     private float bulletLiveTime;
     // Use this for initialization
     void Start ()
@@ -16,7 +19,7 @@ public class Blaster : Weapon
         state = WeaponState.GUN;
         damage = 40f;
         nextFireTime = 0f;
-        weaponFireMode = 1;
+        weaponFireMode = (int)BlasterMode.RING;
 
         resetFireMode();
 
@@ -30,7 +33,7 @@ public class Blaster : Weapon
     {
         switch (weaponFireMode)
         {
-            case 0: //burst fire 3 shots
+            case (int)BlasterMode.STRAIGHT: //burst fire 3 shots
                 clipReloadTime = 1f;
                 bulletReloadTime = 0.1f;
                 bulletCount = 0;
@@ -39,7 +42,7 @@ public class Blaster : Weapon
                 bulletLiveTime = 1f;
                 break;
 
-            case 1: // Ring
+            case (int)BlasterMode.RING: // Ring
                 clipReloadTime = 2f;
                 bulletReloadTime = 0.5f; //Not used
                 bulletCount = 0; //Not used
@@ -56,10 +59,12 @@ public class Blaster : Weapon
         if (Time.time < nextFireTime)
             return;
 
+        //Debug.Log("Firing at " + Time.time.ToString());
+
         switch (weaponFireMode)
         {
-            case 0: fireOne(); break;
-            case 1: fireRing(); break;
+            case (int)BlasterMode.STRAIGHT: fireOne(); break;
+            case (int)BlasterMode.RING: fireRing(); break;
         }
     }
 
@@ -73,8 +78,13 @@ public class Blaster : Weapon
         Projectile projectile = bullet.GetComponent<Projectile>();
         projectile.direction = direction;
         projectile.owner = this.transform.parent.gameObject;
+        //bullet.layer = projectile.owner.layer;
+        bullet.layer = LayerMask.NameToLayer(LayerMask.LayerToName(projectile.owner.layer) + " Projectile");
         projectile.speed = bulletSpeed;
+        projectile.damage = damage;
         projectile.liveTime = bulletLiveTime;
+
+        
     }
 
     public void fireOne()

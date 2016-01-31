@@ -9,6 +9,7 @@ public class GameControl : MonoBehaviour {
     public string sceneName;
     public string portalName;
     public int lives;
+    public float health;
     public bool dash;
     public bool shoot;
     public static GameControl control;
@@ -31,8 +32,10 @@ public class GameControl : MonoBehaviour {
 	void Start () {
 
         //init
+        level = null;
         sceneName = portalName = "";
         lives = 3;
+        health = 100f;
         dash = false;
         shoot = false;
         Load();
@@ -45,6 +48,8 @@ public class GameControl : MonoBehaviour {
 
     public void Load()
     {
+
+        Debug.Log("LOADING FROM " + Application.persistentDataPath + "/saveData.dat");
         Environment.SetEnvironmentVariable("MONO_REFLECTION_SERIALIZER", "yes");
         if (File.Exists(Application.persistentDataPath + "/saveData.dat"))
         {
@@ -57,6 +62,7 @@ public class GameControl : MonoBehaviour {
             sceneName = data.sceneName;
             portalName = data.portalName;
             lives = data.lives;
+            health = data.health;
             shoot = data.shoot;
             dash = data.dash;
 
@@ -67,10 +73,12 @@ public class GameControl : MonoBehaviour {
     {
         Environment.SetEnvironmentVariable("MONO_REFLECTION_SERIALIZER", "yes");
         BinaryFormatter bf = new BinaryFormatter();
+        Debug.Log("SAVING TO " + Application.persistentDataPath + "/saveData.dat");
         FileStream file = File.Create(Application.persistentDataPath + "/saveData.dat");
 
         UserData data= new UserData();
         data.lives = lives;
+        data.health = health;
         data.shoot = shoot;
         data.dash = dash;
         data.sceneName = sceneName;
@@ -88,7 +96,8 @@ class UserData
 {
     public string sceneName = "";
     public string portalName = "";
-    public int lives = 0;
+    public int lives = 3;
+    public float health = 100f;
     public bool dash = false;
     public bool shoot = false;
 

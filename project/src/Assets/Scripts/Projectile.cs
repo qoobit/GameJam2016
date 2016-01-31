@@ -16,6 +16,7 @@ public class Projectile : MonoBehaviour {
         liveTime = 2.0f;
         createTime = Time.time;
         direction.Normalize();
+        
 	}
 	
 	// Update is called once per frame
