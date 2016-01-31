@@ -90,7 +90,6 @@ public class EnemyBase : MonoBehaviour
         
         if (distanceRemaining <= WaypointThreshold)
         {
-            Debug.Log(agent.isOnNavMesh);
             
             agent.SetDestination(this.findRandomTargetPosition());
         }

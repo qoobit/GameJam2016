@@ -8,7 +8,7 @@ public class Explosion : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         age = 0f;
-        lifetime = 999999999f;
+        lifetime = 10f;
 	}
 	
 	// Update is called once per frame

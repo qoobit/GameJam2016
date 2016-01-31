@@ -11,6 +11,7 @@ public class Hero : Damageable {
     public Vector3 facing;
     public DamageState damageState = DamageState.HEALTHY;
     public GameObject cameraRig;
+    public GameObject Crosshair;
 
     public HeroState state = HeroState.IDLE;
 
@@ -362,19 +363,21 @@ public class Hero : Damageable {
 
         lockedObject = null;
         //reset materials to white
-        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
-        {
-            if (GameControl.control.level.GetComponent<Level>().targets[i] != null)
-            {
 
-                if (GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>() != null)
-                {
-                    GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>().material = whiteMat;
-                }
-                
-                SetSkinnedMeshRendererColor(GameControl.control.level.GetComponent<Level>().targets[i], new Color(1f, 255f/255f, 1f,0.2f));
-                
+        GameObject[] targets = GameObject.FindGameObjectsWithTag("Target");
+
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            
+
+            if (targets[i].GetComponent<MeshRenderer>() != null)
+            {
+                targets[i].GetComponent<MeshRenderer>().material = whiteMat;
             }
+            Debug.Log("SETTING WHITE");
+            SetSkinnedMeshRendererColor(targets[i], new Color(1f, 1f, 1f,1f));
+                
         }
 
         //highlight
@@ -382,37 +385,38 @@ public class Hero : Damageable {
         layerMask = (1 << LayerMask.NameToLayer("Targets"));
         layerMask |= (1 << LayerMask.NameToLayer("Enemy"));
 
-        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
+        Crosshair.SetActive(false);
+        if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
         {
-
-            if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
+            if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)
             {
-                if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)
-                {
-                    hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat;
-                }
+                hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat;
+            }
 
-                SetSkinnedMeshRendererColor(hit.collider.gameObject, new Color(0, 255f/255f, 86f/255f,0f));
+            SetSkinnedMeshRendererColor(hit.collider.gameObject, new Color(0, 255f/255f, 86f/255f,0f));
                     
                 
                 
-                lockedObject = hit.collider.gameObject;
-                
+            lockedObject = hit.collider.gameObject;
+
+            
+
+            if (lockToTarget)
+            {
+                Crosshair.SetActive(true);
 
 
-                if (lockToTarget)
-                {
+                directionToTarget = hit.collider.gameObject.transform.position - gameObject.transform.position;
+                facing = directionToTarget;
+                float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
+                angleToTarget *= Mathf.Sign(Vector3.Cross(Vector3.forward, directionToTarget).y);
 
-                    directionToTarget = hit.collider.gameObject.transform.position - gameObject.transform.position;
-                    facing = directionToTarget;
-                    float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
-                    angleToTarget *= Mathf.Sign(Vector3.Cross(Vector3.forward, directionToTarget).y);
+                gameObject.transform.localEulerAngles = new Vector3(0, angleToTarget, 0);
 
-                    gameObject.transform.localEulerAngles = new Vector3(0, angleToTarget, 0);
-                }
-                break;
+                directionToTarget.Normalize();
+                Crosshair.transform.position = hit.collider.gameObject.transform.position - (directionToTarget * 3f);
             }
-
+            
         }
 
 
