@@ -24,6 +24,17 @@ public class Enemy : Damageable
         hp = guage.value;
 	}
 
+
+    void OnTriggerStay(Collider other)
+    {
+        
+        
+        Damageable dmg = other.gameObject.GetComponent<Damageable>();
+        dmg.Hurt(baseDamage, this.gameObject);
+        
+    
+    }
+
     public void Explode()
     {
         GameObject explosion = Instantiate(explosionObject, gameObject.transform.position, Quaternion.identity) as GameObject;

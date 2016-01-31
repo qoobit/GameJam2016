@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/Pro_Western_Starter_Pack/scene/scene.unity
+- path: Assets/Scenes/LevelA.unity
   isLoaded: 1
   isActive: 1

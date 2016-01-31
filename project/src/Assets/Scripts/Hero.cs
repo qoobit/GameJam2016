@@ -34,9 +34,7 @@ public class Hero : Damageable {
     GameObject lockedObject;
 
 
-    List<GameObject> platforms = new List<GameObject>();
-    List<GameObject> bullets = new List<GameObject>();
-    List<GameObject> targets = new List<GameObject>();
+   
 
     
 	// Use this for initialization
@@ -52,51 +50,14 @@ public class Hero : Damageable {
         Physics.gravity = new Vector3(0, -50, 0);
         bulletObject = Resources.Load("Projectile", typeof(GameObject));
 
-        AddPlatform(GameObject.Find("platform"));
-        AddPlatform(GameObject.Find("Plane"));
-        AddPlatform(GameObject.Find("platform (1)"));
-        AddPlatform(GameObject.Find("platform (2)"));
-        AddPlatform(GameObject.Find("platform (3)"));
-        AddPlatform(GameObject.Find("platform (4)"));
-        AddPlatform(GameObject.Find("level_one_piece01_start"));
-        AddPlatform(GameObject.Find("level_one_piece02_mid"));
-        AddPlatform(GameObject.Find("level_one_piece03_end"));
-        AddPlatform(GameObject.Find("Nudger A"));
-        AddPlatform(GameObject.Find("Nudger B"));
-        AddPlatform(GameObject.Find("Nudger C"));
-
-        AddTarget(GameObject.Find("Enemy"));
-        AddTarget(GameObject.Find("Pit"));
-        AddTarget(GameObject.Find("Target"));
-        AddTarget(GameObject.Find("Target (1)"));
-        AddTarget(GameObject.Find("Target (2)"));
-        AddTarget(GameObject.Find("Target (3)"));
-        AddTarget(GameObject.Find("Target (4)"));
-        AddTarget(GameObject.Find("Target (5)"));
-        AddTarget(GameObject.Find("Target (6)"));
-        AddTarget(GameObject.Find("Target (7)"));
-        AddTarget(GameObject.Find("Target (8)"));
-        AddTarget(GameObject.Find("Target (9)"));
-        AddTarget(GameObject.Find("Target (10)"));
-
-        AddTarget(GameObject.Find("Turret"));
-        AddTarget(GameObject.Find("Turret (1)"));
-        AddTarget(GameObject.Find("Turret (2)"));
-
+        
         //Load a blaster as our weapon
         Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
         GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, Quaternion.identity) as GameObject;
         blasterWeapon.transform.parent = this.transform;
         weapon = blasterWeapon.GetComponent<Weapon>();
     }
-    void AddTarget(GameObject t)
-    {
-        if (t != null) targets.Add(t);
-    }
-    void AddPlatform(GameObject platform)
-    {
-        if(platform!=null) platforms.Add(platform);
-    }
+    
 
     void OnTriggerStay(Collider other)
     {
@@ -125,11 +86,11 @@ public class Hero : Damageable {
         
         else
         {
-            for (int i = 0; i < platforms.Count; i++)
+            for (int i = 0; i < GameControl.control.level.GetComponent<Level>().platforms.Count; i++)
             {
                 //Debug.Log(col.gameObject.name);
                 
-                if(col.gameObject.name == platforms[i].name)
+                if(col.gameObject.name == GameControl.control.level.GetComponent<Level>().platforms[i].name)
                 {
                     state = HeroState.IDLE;
                     onFloor = true;
@@ -265,14 +226,15 @@ public class Hero : Damageable {
         Vector3 directionToTarget = Vector3.zero;
 
         lockedObject = null;
-        for (int i = 0; i < targets.Count; i++)
+
+        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
         {
-            if (targets[i] != null)
+            if (GameControl.control.level.GetComponent<Level>().targets[i] != null)
             {
-                if(targets[i].GetComponent<MeshRenderer>()!=null) targets[i].GetComponent<MeshRenderer>().material = whiteMat;
+                if(GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>()!=null) GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>().material = whiteMat;
             }
         }
-        for (int i = 0; i < targets.Count; i++)
+        for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
         {
 
             if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, 1 << LayerMask.NameToLayer("Targets")))

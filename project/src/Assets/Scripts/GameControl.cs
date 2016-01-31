@@ -6,10 +6,14 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 
 public class GameControl : MonoBehaviour {
+    public string sceneName;
+    public string portalName;
     public int lives;
     public bool dash;
     public bool shoot;
     public static GameControl control;
+    public GameObject level;
+
 
 	// Use this for initialization
     void Awake()
@@ -27,6 +31,7 @@ public class GameControl : MonoBehaviour {
 	void Start () {
 
         //init
+        sceneName = portalName = "";
         lives = 3;
         dash = false;
         shoot = false;
@@ -49,6 +54,8 @@ public class GameControl : MonoBehaviour {
             file.Close();
 
             //loading goes here
+            sceneName = data.sceneName;
+            portalName = data.portalName;
             lives = data.lives;
             shoot = data.shoot;
             dash = data.dash;
@@ -66,6 +73,8 @@ public class GameControl : MonoBehaviour {
         data.lives = lives;
         data.shoot = shoot;
         data.dash = dash;
+        data.sceneName = sceneName;
+        data.portalName = portalName;
         //saving goes here
 
         bf.Serialize(file, data);
@@ -77,7 +86,11 @@ public class GameControl : MonoBehaviour {
 [Serializable]
 class UserData
 {
+    public string sceneName = "";
+    public string portalName = "";
     public int lives = 0;
     public bool dash = false;
     public bool shoot = false;
+
+    
 }
