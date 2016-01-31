@@ -22,8 +22,6 @@ public class Hero : Damageable {
     
     Vector3 spawnPoint;
     
-
-    Object bulletObject;
     float speed;
     bool onFloor;
 
@@ -33,8 +31,6 @@ public class Hero : Damageable {
     bool lockToTarget;
     GameObject lockedObject;
 
-
-   
 
     
 	// Use this for initialization
@@ -48,8 +44,6 @@ public class Hero : Damageable {
         dashAllowed = false;
 
         Physics.gravity = new Vector3(0, -50, 0);
-        bulletObject = Resources.Load("Projectile", typeof(GameObject));
-
         
         //Load a blaster as our weapon
         Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
@@ -114,6 +108,7 @@ public class Hero : Damageable {
             SetMeshRendererEnabled(child.gameObject, enabled);
         }
     }
+
     // Update is called once per frame
     void Update() {
         //Debug.Log(state);
@@ -124,8 +119,7 @@ public class Hero : Damageable {
         hmdForward = Camera.main.transform.forward;
         hmdForward.y = 0f;
         hmdForward.Normalize();
-
-
+        
 
         //blink stunned hero
         if (damageState == DamageState.STUNNED)
@@ -226,7 +220,7 @@ public class Hero : Damageable {
         Vector3 directionToTarget = Vector3.zero;
 
         lockedObject = null;
-
+        //reset materials to white
         for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
         {
             if (GameControl.control.level.GetComponent<Level>().targets[i] != null)
@@ -234,6 +228,8 @@ public class Hero : Damageable {
                 if(GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>()!=null) GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>().material = whiteMat;
             }
         }
+
+        //highlight
         for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
         {
 
