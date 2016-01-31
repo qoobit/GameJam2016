@@ -10,6 +10,7 @@ public class Turret : Damageable {
         //Load a blaster as our weapon
         Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
         GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, Quaternion.identity) as GameObject;
+        blasterWeapon.transform.parent = this.transform;
         weapon = blasterWeapon.GetComponent<Weapon>();
     }
 	
