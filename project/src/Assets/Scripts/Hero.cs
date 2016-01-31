@@ -50,6 +50,7 @@ public class Hero : Damageable {
         Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
         GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, this.transform.rotation) as GameObject;
         blasterWeapon.transform.parent = this.transform;
+        blasterWeapon.transform.localPosition = new Vector3(blasterWeapon.transform.localPosition.x, blasterWeapon.transform.localPosition.y + 2f, blasterWeapon.transform.localPosition.z);
         weapon = blasterWeapon.GetComponent<Weapon>();
 
 
@@ -64,6 +65,7 @@ public class Hero : Damageable {
 
     void OnTriggerStay(Collider other)
     {
+        //Debug.Log(gameObject.name + " " + other.name + " " + onFloor + " " + state);
 
         if (other.gameObject.layer == LayerMask.NameToLayer("Targets"))
         {
@@ -90,20 +92,17 @@ public class Hero : Damageable {
     }
     void OnCollisionEnter(Collision col)
     {
-       
+        
 
         if (GameControl.control.level != null) {
-            for (int i = 0; i < GameControl.control.level.GetComponent<Level>().platforms.Count; i++)
+            Debug.Log("COL" + col.gameObject.tag);
+            if (col.gameObject.tag == "Platform")
             {
-                if (col.gameObject.name == GameControl.control.level.GetComponent<Level>().platforms[i].name)
-                {
-                    state = HeroState.IDLE;
-                    onFloor = true;
-                    dashAllowed = true;
-                    break;
-                }
-
+                state = HeroState.IDLE;
+                onFloor = true;
+                dashAllowed = true;
             }
+
         }
             
         
@@ -122,9 +121,31 @@ public class Hero : Damageable {
         }
     }
 
+    void SetSkinnedMeshRendererColor(GameObject go, Color c)
+    {
+        if (go.GetComponent<SkinnedMeshRenderer>() != null)
+        {
+
+            go.GetComponent<SkinnedMeshRenderer>().material.SetFloat("_Mode", 2);
+            go.GetComponent<SkinnedMeshRenderer>().material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            go.GetComponent<SkinnedMeshRenderer>().material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            //go.GetComponent<SkinnedMeshRenderer>().material.SetInt("_ZWrite", 0);
+            //go.GetComponent<SkinnedMeshRenderer>().material.DisableKeyword("_ALPHATEST_ON");
+            //go.GetComponent<SkinnedMeshRenderer>().material.EnableKeyword("_ALPHABLEND_ON");
+            go.GetComponent<SkinnedMeshRenderer>().material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            //go.GetComponent<SkinnedMeshRenderer>().material.renderQueue = 3000;
+
+            go.GetComponent<SkinnedMeshRenderer>().material.SetColor("_Color", c);
+        }
+        foreach (Transform child in go.transform)
+        {
+            SetSkinnedMeshRendererColor(child.gameObject, c);
+        }
+    }
+
     // Update is called once per frame
     void Update() {
-        //Debug.Log(state);
+        
         ((Blaster)weapon).bulletReloadTime = 0.01f;
         ((Blaster)weapon).clipReloadTime = 0f;
         weapon.weaponFireMode = (int)BlasterMode.STRAIGHT;
@@ -183,28 +204,26 @@ public class Hero : Damageable {
         float theta = Vector3.Angle(Vector3.forward, hmdForward);
         theta *= Mathf.Sign(Vector3.Cross(Vector3.forward, hmdForward).y);
 
-        if (state != HeroState.DASHING)
+        if (movement.magnitude != 0f)
         {
-            if (movement.magnitude != 0f)
-            {
-                movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
-                gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
+            movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
+            gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
                 
-                state = HeroState.WALKING;
-                if (!lockToTarget)
-                {
-                    facing = movementUnit;
-                }
-            }
-            else
+            state = HeroState.WALKING;
+            if (!lockToTarget||lockedObject==null)
             {
-                if (state == HeroState.WALKING)
-                {
-                    state = HeroState.IDLE;
-                }
-                
+                facing = movementUnit;
             }
         }
+        else
+        {
+            if (state == HeroState.WALKING)
+            {
+                state = HeroState.IDLE;
+            }
+                
+        }
+        
         
 
         //controller rotation
@@ -229,31 +248,36 @@ public class Hero : Damageable {
 
         Vector3 directionToTarget = HighlightTarget();
 
-
         
         //controller buttons
         if (Input.GetButtonDown("A"))
         {
-            if (state!=HeroState.DASHING)
+            
+            if (state != HeroState.DASHING)
             {
-                
-                if(onFloor)
+
+                if (onFloor)
                 {
                     gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
                     gameObject.GetComponent<Rigidbody>().useGravity = true;
                     state = HeroState.JUMPING;
                     onFloor = false;
-                    dashAllowed = false;
-                    Debug.Log("LEAVING");
                     
+                    Debug.Log("LEAVING");
+                    spawnPoint = gameObject.transform.position;
+
                 }
-                
+
             }
+            
+            
         }
         else if (Input.GetButtonDown("B"))
         {
-            if (state != HeroState.DASHING)
+
+            if (state != HeroState.DASHING&&dashAllowed)
             {
+                if(onFloor) spawnPoint = gameObject.transform.position;
                 if ((lockToTarget && lockedObject != null))
                 {
                     directionToTarget = lockedObject.transform.position - gameObject.transform.position;
@@ -263,16 +287,16 @@ public class Hero : Damageable {
                     gameObject.GetComponent<Rigidbody>().useGravity = false;
                     state = HeroState.DASHING;
                     dashAge = 0f;
-                    onFloor = false;
+                    //onFloor = false;
                     dashAllowed = false;
                 }
                 else {
                     facing.Normalize();
-                    gameObject.GetComponent<Rigidbody>().AddForce(facing * 20000f);
+                    gameObject.GetComponent<Rigidbody>().AddForce(facing * 10000f);
                     gameObject.GetComponent<Rigidbody>().useGravity = false;
                     state = HeroState.DASHING;
                     dashAge = 0f;
-                    onFloor = false;
+                    //onFloor = false;
                     dashAllowed = false;
                 }
 
@@ -291,7 +315,7 @@ public class Hero : Damageable {
             RealignHMD();
         }
 
-            if (Input.GetAxisRaw("RT") < 0f)
+        if (Input.GetAxisRaw("RT") < 0f)
         {
             //lock
             lockToTarget = true;
@@ -342,7 +366,14 @@ public class Hero : Damageable {
         {
             if (GameControl.control.level.GetComponent<Level>().targets[i] != null)
             {
-                if (GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>() != null) GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>().material = whiteMat;
+
+                if (GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>() != null)
+                {
+                    GameControl.control.level.GetComponent<Level>().targets[i].GetComponent<MeshRenderer>().material = whiteMat;
+                }
+                
+                SetSkinnedMeshRendererColor(GameControl.control.level.GetComponent<Level>().targets[i], new Color(1f, 255f/255f, 1f,0.2f));
+                
             }
         }
 
@@ -350,14 +381,24 @@ public class Hero : Damageable {
         LayerMask layerMask = new LayerMask();
         layerMask = (1 << LayerMask.NameToLayer("Targets"));
         layerMask |= (1 << LayerMask.NameToLayer("Enemy"));
+
         for (int i = 0; i < GameControl.control.level.GetComponent<Level>().targets.Count; i++)
         {
 
             if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
             {
-                if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null) hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat;
+                if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)
+                {
+                    hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat;
+                }
 
+                SetSkinnedMeshRendererColor(hit.collider.gameObject, new Color(0, 255f/255f, 86f/255f,0f));
+                    
+                
+                
                 lockedObject = hit.collider.gameObject;
+                
+
 
                 if (lockToTarget)
                 {

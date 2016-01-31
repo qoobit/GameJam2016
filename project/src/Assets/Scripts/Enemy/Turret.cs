@@ -67,6 +67,7 @@ public class Turret : Enemy
 
     override public void Die()
     {
+        baseDamage = 0f;
         StartCoroutine(WaitAndExplode(2.5f));
     }
 }

@@ -23,6 +23,15 @@ public class Enemy : Damageable
 	}
 
 
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (baseDamage == 0) return;
+
+        Damageable damageable = collision.gameObject.GetComponent<Damageable>();
+        if (damageable != null)
+            damageable.Hurt(baseDamage, this.gameObject);
+    }
     void OnTriggerStay(Collider other)
     {
         if (baseDamage == 0) return;
@@ -59,6 +68,7 @@ public class Enemy : Damageable
 
     override public void Die()
     {
+        baseDamage = 0f;
         if(GetComponent<EnemyBase>()!=null) GetComponent<EnemyBase>().CurrentState = EnemyBaseState.IDLE;
         StartCoroutine(WaitAndExplode(0.5f));
     }

@@ -85,12 +85,14 @@ public class EnemyBase : MonoBehaviour
 
     private void updatePatrol()
     {
-
+        if (!agent.enabled||!agent.isOnNavMesh) return;
         float distanceRemaining = Vector3.Magnitude(agent.destination - this.transform.position) - agent.radius;
         
         if (distanceRemaining <= WaypointThreshold)
         {
-            agent.destination = this.findRandomTargetPosition();
+            Debug.Log(agent.isOnNavMesh);
+            
+            agent.SetDestination(this.findRandomTargetPosition());
         }
 
         //Component collider = this.GetComponentInChildren<BoxCollider>();
@@ -102,23 +104,32 @@ public class EnemyBase : MonoBehaviour
     {
 
         if (WaypointCollection == null)
-            throw new System.Exception("No waypoint collection provided");
-
-        List<Transform> waypointList = new List<Transform>();
-        foreach (Transform child in WaypointCollection.transform.GetComponentsInChildren<Transform>())
         {
-            if (child.tag.Equals("Waypoint") && !child.transform.position.Equals(agent.destination))
-            {
-                waypointList.Add(child);
-            }
+            //throw new System.Exception("No waypoint collection provided");
+            GetComponent<NavMeshAgent>().enabled = false;
+            return gameObject.transform.position ;
         }
+        else
+        {
+            List<Transform> waypointList = new List<Transform>();
+            foreach (Transform child in WaypointCollection.transform.GetComponentsInChildren<Transform>())
+            {
+                if (child.tag.Equals("Waypoint") && !child.transform.position.Equals(agent.destination))
+                {
+                    waypointList.Add(child);
+                }
+            }
+
+            if (waypointList.Count == 0)
+                throw new System.Exception("No waypoints found in waypoint collection");
+
+            int randomIndex = Random.Range(0, waypointList.Count);
+
+            return waypointList[randomIndex].position;
+        }
+            
+
         
-        if (waypointList.Count == 0)
-            throw new System.Exception("No waypoints found in waypoint collection");
-
-        int randomIndex = Random.Range(0, waypointList.Count);
-
-        return waypointList[randomIndex].position;
     }
 
     public Vector3 GetVelocity()

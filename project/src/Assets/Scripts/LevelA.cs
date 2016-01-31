@@ -9,20 +9,10 @@ public class LevelA : MonoBehaviour {
     {
         
 
-        GetComponent<Level>().AddPlatform(GameObject.Find("platform"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("Plane"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("platform (1)"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("platform (2)"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("platform (3)"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("platform (4)"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("platform (5)"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("platform (6)"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("level_one_piece01_start"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("level_one_piece02_mid"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("level_one_piece03_end"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("Nudger A"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("Nudger B"));
-        GetComponent<Level>().AddPlatform(GameObject.Find("Nudger C"));
+   
+
+
+
 
         GetComponent<Level>().AddTarget(GameObject.Find("Enemy"));
         GetComponent<Level>().AddTarget(GameObject.Find("Pit"));
