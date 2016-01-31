@@ -8,6 +8,8 @@ abstract public class Weapon : MonoBehaviour
 {
     public float damage;
     public WeaponState state;
+    public int weaponFireMode;
 
     abstract public void Fire();
+    abstract public void ProjectileDestroyed();
 }

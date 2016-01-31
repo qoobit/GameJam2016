@@ -7,6 +7,8 @@ public class Projectile : MonoBehaviour {
     public float lifetime;
     public float age;
     public float damage;
+    public GameObject owner; //The entity that fires the weapon
+    public Weapon weapon; //The weapon that creates the projectile
     
 	// Use this for initialization
 	void Start () {
@@ -28,6 +30,13 @@ public class Projectile : MonoBehaviour {
         Damageable other = collision.gameObject.GetComponent<Damageable>();
         other.Hurt(this.damage, this.gameObject);
 
+        //Destroy this projectile
         Destroy(this.gameObject);
+
+        //Tell the weapon that we were destroyed
+        if (weapon != null)
+            weapon.ProjectileDestroyed();
+
+        
     }
 }
