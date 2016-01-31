@@ -4,25 +4,27 @@ using System.Collections;
 public class Projectile : MonoBehaviour {
     public Vector3 direction;
     public float speed;
-    public float lifetime;
-    public float age;
+    public float liveTime;
+    public float createTime;
     public float damage;
     public GameObject owner; //The entity that fires the weapon
     public Weapon weapon; //The weapon that creates the projectile
     
 	// Use this for initialization
 	void Start () {
-        speed = 0.5f;
-        age = 0f;
-        lifetime = 5f;
+        speed = 20.0f;
+        liveTime = 2.0f;
+        createTime = Time.time;
         direction.Normalize();
 	}
 	
 	// Update is called once per frame
-	void Update () {
-        age += Time.deltaTime;
-        if (age > lifetime) Destroy(this.gameObject);
-        this.gameObject.transform.position += direction * speed;
+	void Update ()
+    {
+        if ((Time.time - createTime) > liveTime)
+            Destroy(this.gameObject);
+
+        this.gameObject.transform.position += direction * (speed * Time.deltaTime);
 	}
 
     void OnCollisionEnter(Collision collision)
@@ -32,11 +34,5 @@ public class Projectile : MonoBehaviour {
 
         //Destroy this projectile
         Destroy(this.gameObject);
-
-        //Tell the weapon that we were destroyed
-        if (weapon != null)
-            weapon.ProjectileDestroyed();
-
-        
     }
 }

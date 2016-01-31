@@ -11,5 +11,4 @@ abstract public class Weapon : MonoBehaviour
     public int weaponFireMode;
 
     abstract public void Fire();
-    abstract public void ProjectileDestroyed();
 }
