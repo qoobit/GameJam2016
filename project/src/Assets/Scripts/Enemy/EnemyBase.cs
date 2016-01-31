@@ -53,7 +53,9 @@ public class EnemyBase : MonoBehaviour
                 break;
 
             case EnemyBaseState.PATROL:
-                agent.Resume();
+                if (agent.isOnNavMesh)
+                    agent.Resume();
+
                 this.updatePatrol();
                 if (head != null)
                 {
@@ -85,15 +87,12 @@ public class EnemyBase : MonoBehaviour
 
     private void updatePatrol()
     {
-        if (!agent.enabled||!agent.isOnNavMesh) return;
-        float distanceRemaining = Vector3.Magnitude(agent.destination - this.transform.position) - agent.radius;
+        if (!agent.enabled || !agent.isOnNavMesh)
+            return;
 
+        float distanceRemaining = agent.remainingDistance;
         if (distanceRemaining <= WaypointThreshold)
-
-        {
-      
             agent.SetDestination(this.findRandomTargetPosition());
-        }
 
         //Component collider = this.GetComponentInChildren<BoxCollider>();
         Debug.DrawLine(this.transform.position, agent.destination, new Color(0.75f, 1.0f, 0.5f, 1.0f));

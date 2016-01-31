@@ -80,4 +80,9 @@ public class Enemy : Damageable
         
         this.Explode();
     }
+
+    public bool isAlive()
+    {
+        return (guage.value > 0);
+    }
 }

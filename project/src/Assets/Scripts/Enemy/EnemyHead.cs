@@ -127,7 +127,7 @@ public class EnemyHead : MonoBehaviour
 
         //If we can see the target, look at the target
         Vector3 vectorToTarget = lookAtTarget.position - head.position;
-        if (vectorToTarget.magnitude <= this.SightDistance)
+        if (vectorToTarget.magnitude <= (this.SightDistance + SphereCastRadius))
         {
             currentState = EnemyHeadState.LOCKED;
             Vector3 vectorToTargetProjected = this.projectVector3OnPlane(vectorToTarget, body.up).normalized;
