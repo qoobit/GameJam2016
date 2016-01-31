@@ -11,11 +11,12 @@ public class Enemy : Damageable
     public Vector3 direction;
 
     
-    void Start () {
+    void Start ()
+    {
         guage = new Guage();
         explosionObject = Resources.Load("Explosion", typeof(GameObject));
         hp = 100f;
-        baseDamage = 40f;
+        baseDamage = 0f;
         direction = new Vector3(0, 0, 1);
     }
 	
@@ -27,12 +28,11 @@ public class Enemy : Damageable
 
     void OnTriggerStay(Collider other)
     {
+        if (baseDamage == 0) return;
         
-        
-        Damageable dmg = other.gameObject.GetComponent<Damageable>();
-        dmg.Hurt(baseDamage, this.gameObject);
-        
-    
+        Damageable damageable = other.gameObject.GetComponent<Damageable>();
+        if (damageable != null)
+            damageable.Hurt(baseDamage, this.gameObject);
     }
 
     public void Explode()

@@ -27,6 +27,18 @@ public class Projectile : MonoBehaviour {
         this.gameObject.transform.position += direction * (speed * Time.deltaTime);
 	}
 
+    void OnTriggerEnter(Collider collider)
+    {
+        Damageable other = collider.gameObject.GetComponent<Damageable>();
+        if (other == null) return;
+
+        other.Hurt(this.damage, this.gameObject);
+
+        //Destroy this projectile
+        Destroy(this.gameObject);
+    }
+
+
     void OnCollisionEnter(Collision collision)
     {
         Damageable other = collision.gameObject.GetComponent<Damageable>();

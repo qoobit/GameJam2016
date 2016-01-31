@@ -56,7 +56,6 @@ public class Blaster : Weapon
         if (Time.time < nextFireTime)
             return;
 
-        Debug.Log("Firing at " + Time.time.ToString());
         switch (weaponFireMode)
         {
             case 0: fireOne(); break;

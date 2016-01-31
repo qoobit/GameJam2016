@@ -13,10 +13,12 @@ public class EnemyBase : MonoBehaviour
 
     private NavMeshAgent agent;
     private EnemyHead head;
+    private Transform body;
 
     // Use this for initialization
     void Start()
     {
+        body = this.transform.FindChild("Body");
         agent = GetComponent<NavMeshAgent>();
         head = GetComponent<EnemyHead>();
     }
@@ -24,6 +26,13 @@ public class EnemyBase : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //Update our state if head is locked on to something
+        if (head.currentState == EnemyHeadState.LOCKED)
+        {
+            this.CurrentState = EnemyBaseState.OFFENSE;
+        }
+
+        //Enemy State machine 
         switch (CurrentState)
         {
             case EnemyBaseState.IDLE:
@@ -40,6 +49,7 @@ public class EnemyBase : MonoBehaviour
                 break;
 
             case EnemyBaseState.OFFENSE:
+                this.updateOffense();
                 break;
 
             case EnemyBaseState.DEFENSE:
@@ -48,6 +58,15 @@ public class EnemyBase : MonoBehaviour
             default:
                 throw new System.Exception("Current State is not set");
         }
+    }
+
+    private void updateOffense()
+    {
+        if (head == null) return;
+
+        //Turn the body towards our target but remain upright
+        Vector3 lookAtVector = head.lookAtTarget.position - new Vector3(0, head.lookAtTarget.position.y - body.position.y, 0);
+        body.LookAt(lookAtVector);
     }
 
     private void updatePatrol()
@@ -60,9 +79,9 @@ public class EnemyBase : MonoBehaviour
             agent.destination = this.findRandomTargetPosition();
         }
 
-        Component body = this.GetComponentInChildren<BoxCollider>();
-        Debug.DrawLine(body.transform.position, agent.destination, new Color(0.75f, 1.0f, 0.5f, 1.0f));
-        Debug.DrawRay(body.transform.position, this.transform.forward * 100, new Color(0.75f, 0.5f, 1.0f, 1.0f));
+        //Component collider = this.GetComponentInChildren<BoxCollider>();
+        Debug.DrawLine(this.transform.position, agent.destination, new Color(0.75f, 1.0f, 0.5f, 1.0f));
+        Debug.DrawRay(this.transform.position, this.transform.forward * 100, new Color(0.75f, 0.5f, 1.0f, 1.0f));
     }
 
     private Vector3 findRandomTargetPosition()

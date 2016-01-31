@@ -1,8 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Turret : Damageable {
-    public Weapon weapon;
+public class Turret : Enemy {
 
     // Use this for initialization
     void Start ()
@@ -12,6 +11,7 @@ public class Turret : Damageable {
         GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, Quaternion.identity) as GameObject;
         blasterWeapon.transform.parent = this.transform;
         weapon = blasterWeapon.GetComponent<Weapon>();
+        weapon.weaponFireMode = 1;
     }
 	
 	// Update is called once per frame

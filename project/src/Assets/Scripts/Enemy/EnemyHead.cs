@@ -56,8 +56,7 @@ public class EnemyHead : MonoBehaviour
         head.localRotation = Quaternion.RotateTowards(head.localRotation, targetRotation, this.RotationMaxVelocity * Time.deltaTime);
         
         //Project head.forward vector on to body.up plane
-        float dot = -Vector3.Dot(head.forward, body.up);
-        Vector3 headForwardProjected = (head.forward + (body.up * dot)).normalized;
+        Vector3 headForwardProjected = this.projectVector3OnPlane(head.forward, body.up).normalized;
 
         //Get our current Y rotation
         float headRotationY = Vector3.Angle(headForwardProjected, body.forward);
@@ -73,6 +72,12 @@ public class EnemyHead : MonoBehaviour
 
         Debug.DrawRay(head.position, head.forward * SphereCastDistance, Color.red);
         return;
+    }
+
+    private Vector3 projectVector3OnPlane(Vector3 v, Vector3 planeNormal)
+    {
+        float dot = -Vector3.Dot(v, planeNormal);
+        return (v + (planeNormal * dot));
     }
 
     private void lookForHero()
@@ -105,10 +110,12 @@ public class EnemyHead : MonoBehaviour
         if (lookAtTarget == null)
             return;
 
-        //Turn the body towards our target but remain upright
-        Vector3 lookAtVector = lookAtTarget.position - new Vector3(0, lookAtTarget.position.y - body.position.y, 0);
-        body.LookAt(lookAtVector);
-        head.LookAt(lookAtTarget);
+        Vector3 directionToTarget = lookAtTarget.position - head.position;
+        Vector3 directionToTargetProjected = this.projectVector3OnPlane(directionToTarget, body.up).normalized;
+
+        float angleYToTarget = Vector3.Angle(body.transform.forward, directionToTargetProjected);
+        if (angleYToTarget <= this.RotationLimitY)
+            head.LookAt(lookAtTarget);
     }
 
     public void LookForPlayer()
