@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public enum EnemyHeadState { SEARCHING, LOCKED }
+public enum EnemyHeadState { IDLE, SEARCHING, LOCKED, LOST }
 
 public class EnemyHead : MonoBehaviour
 {
@@ -9,7 +9,10 @@ public class EnemyHead : MonoBehaviour
     public float RotationLimitX = 10.0f;
     public float RotationMaxVelocity = 135.0f;
     public float SphereCastRadius = 0.5f;
-    public float SphereCastDistance = 15.0f;
+    public float SightDistance = 15.0f;
+    public float TargetLostTimeout = 4.0f; // If target is out of sight, how long before we give up
+
+
 
     private Transform head;
     private Transform body;
@@ -18,6 +21,7 @@ public class EnemyHead : MonoBehaviour
     private Quaternion targetRotation;
     private Quaternion lookingLeft;
     private Quaternion lookingRight;
+    private float targetLastSeenTime; //Keeps track of when we last saw the target
 
     // Use this for initialization
     void Start()
@@ -39,20 +43,23 @@ public class EnemyHead : MonoBehaviour
 
         switch (currentState)
         {
+            case EnemyHeadState.IDLE:
+                break;
+
             case EnemyHeadState.SEARCHING:
                 this.updateSearching();
                 this.lookForHero();
                 break;
 
             case EnemyHeadState.LOCKED:
-                this.updateLocked();
+            case EnemyHeadState.LOST:
+                this.updateLockedAndLost();
                 break;
         }
     }
     
     private void updateSearching()
     {
-        //Quaternion localHeadRotation = 
         head.localRotation = Quaternion.RotateTowards(head.localRotation, targetRotation, this.RotationMaxVelocity * Time.deltaTime);
         
         //Project head.forward vector on to body.up plane
@@ -70,7 +77,7 @@ public class EnemyHead : MonoBehaviour
         if (remainder <= 0.5f)
             targetRotation = this.getNextSearchTargetRotation();
 
-        Debug.DrawRay(head.position, head.forward * SphereCastDistance, Color.red);
+        Debug.DrawRay(head.position, head.forward * SightDistance, Color.red);
         return;
     }
 
@@ -83,7 +90,7 @@ public class EnemyHead : MonoBehaviour
     private void lookForHero()
     {
         RaycastHit hitInfo;
-        Physics.SphereCast(head.position, SphereCastRadius, head.forward, out hitInfo, SphereCastDistance);
+        Physics.SphereCast(head.position, SphereCastRadius, head.forward, out hitInfo, SightDistance);
 
         if (hitInfo.collider == null)
             return;
@@ -95,6 +102,7 @@ public class EnemyHead : MonoBehaviour
             if (currentTransform.name == "Hero")
             {
                 this.LookAt(currentTransform);
+                targetLastSeenTime = Time.time;
                 currentState = EnemyHeadState.LOCKED;
                 break;
             }
@@ -105,17 +113,35 @@ public class EnemyHead : MonoBehaviour
         } while (currentTransform != null);
     }
 
-    private void updateLocked()
+    private void updateLockedAndLost()
     {
         if (lookAtTarget == null)
+            currentState = EnemyHeadState.IDLE;
+
+        //If we haven't seen the target in a while, change our state
+        if ((Time.time - targetLastSeenTime) >= this.TargetLostTimeout)
+        {
+            currentState = EnemyHeadState.IDLE;
             return;
+        }
 
-        Vector3 directionToTarget = lookAtTarget.position - head.position;
-        Vector3 directionToTargetProjected = this.projectVector3OnPlane(directionToTarget, body.up).normalized;
+        //If we can see the target, look at the target
+        Vector3 vectorToTarget = lookAtTarget.position - head.position;
+        if (vectorToTarget.magnitude <= this.SightDistance)
+        {
+            currentState = EnemyHeadState.LOCKED;
+            Vector3 vectorToTargetProjected = this.projectVector3OnPlane(vectorToTarget, body.up).normalized;
 
-        float angleYToTarget = Vector3.Angle(body.transform.forward, directionToTargetProjected);
-        if (angleYToTarget <= this.RotationLimitY)
-            head.LookAt(lookAtTarget);
+            float angleYToTarget = Vector3.Angle(body.transform.forward, vectorToTargetProjected);
+            if (angleYToTarget <= this.RotationLimitY)
+                head.LookAt(lookAtTarget);
+
+            targetLastSeenTime = Time.time;
+        }
+        else
+        {
+            currentState = EnemyHeadState.LOST;
+        }
     }
 
     public void LookForPlayer()

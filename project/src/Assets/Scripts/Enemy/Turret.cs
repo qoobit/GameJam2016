@@ -1,11 +1,15 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Soldier : Enemy
+public class Turret : Enemy
 {
     private EnemyHead head;
     private Transform body;
     private EnemyBase enemyBase;
+    private Animator animator;
+
+    //For Animation States
+    private bool isAttacking;
 
     // Use this for initialization
     void Start()
@@ -13,6 +17,7 @@ public class Soldier : Enemy
         head = GetComponent<EnemyHead>();
         body = this.transform.FindChild("Body");
         enemyBase = GetComponent<EnemyBase>();
+        animator = GetComponent<Animator>();
 
         if (head == null) throw new System.Exception("Unable to find Head");
         if (enemyBase == null) throw new System.Exception("Unable to find Body");
@@ -30,8 +35,15 @@ public class Soldier : Enemy
     {
         if (head.currentState == EnemyHeadState.LOCKED)
         {
+            isAttacking = true;
             attack();
         }
+        else
+        {
+            isAttacking = false;
+        }
+
+        updateAnimationStates();
     }
 
     private void attack()
@@ -39,5 +51,17 @@ public class Soldier : Enemy
         if (weapon == null) return;
 
         weapon.Fire();
+    }
+
+    private void updateAnimationStates()
+    {
+        animator.SetBool("attacking", isAttacking);
+        animator.SetFloat("speed", enemyBase.GetVelocity().magnitude);
+        animator.SetFloat("hp", this.hp);
+    }
+
+    override public void Die()
+    {
+        StartCoroutine(WaitAndExplode(2.5f));
     }
 }

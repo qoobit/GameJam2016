@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Turret : Enemy {
+public class Cannon : Enemy {
 
     // Use this for initialization
     void Start ()

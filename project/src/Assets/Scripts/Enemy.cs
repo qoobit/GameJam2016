@@ -3,21 +3,18 @@ using System.Collections;
 
 public class Enemy : Damageable
 {
-    public float hp;
-    Guage guage;
-    public float baseDamage;
-    Object explosionObject;
-    public Weapon weapon;
-    public Vector3 direction;
+    public float hp = 100f;
+    public float baseDamage = 0f;
+
+    protected Guage guage;
+    protected Object explosionObject;
+    protected Weapon weapon;
 
     
     void Start ()
     {
         guage = new Guage();
         explosionObject = Resources.Load("Explosion", typeof(GameObject));
-        hp = 100f;
-        baseDamage = 0f;
-        direction = new Vector3(0, 0, 1);
     }
 	
 
@@ -53,6 +50,12 @@ public class Enemy : Damageable
 
     override public void Die()
     {
+        StartCoroutine(WaitAndExplode(0.5f));
+    }
+
+    protected IEnumerator WaitAndExplode(float waitTime)
+    {
+        yield return new WaitForSeconds(waitTime);
         this.Explode();
     }
 }

@@ -31,6 +31,14 @@ public class EnemyBase : MonoBehaviour
         {
             this.CurrentState = EnemyBaseState.OFFENSE;
         }
+        else if (head.currentState == EnemyHeadState.LOST)
+        {
+            this.CurrentState = EnemyBaseState.IDLE;
+        }
+        else if (head.currentState == EnemyHeadState.IDLE)
+        {
+            this.CurrentState = EnemyBaseState.PATROL;
+        }
 
         //Enemy State machine 
         switch (CurrentState)
@@ -49,6 +57,7 @@ public class EnemyBase : MonoBehaviour
                 break;
 
             case EnemyBaseState.OFFENSE:
+                agent.Stop();
                 this.updateOffense();
                 break;
 
@@ -66,7 +75,7 @@ public class EnemyBase : MonoBehaviour
 
         //Turn the body towards our target but remain upright
         Vector3 lookAtVector = head.lookAtTarget.position - new Vector3(0, head.lookAtTarget.position.y - body.position.y, 0);
-        body.LookAt(lookAtVector);
+        this.transform.LookAt(lookAtVector);
     }
 
     private void updatePatrol()
@@ -105,5 +114,10 @@ public class EnemyBase : MonoBehaviour
         int randomIndex = Random.Range(0, waypointList.Count);
 
         return waypointList[randomIndex].position;
+    }
+
+    public Vector3 GetVelocity()
+    {
+        return agent.velocity;
     }
 }
