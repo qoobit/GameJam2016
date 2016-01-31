@@ -64,7 +64,8 @@ public class EnemyBase : MonoBehaviour
                 break;
 
             case EnemyBaseState.OFFENSE:
-                agent.Stop();
+                if (agent.isActiveAndEnabled)
+                    agent.Stop();
                 this.updateOffense();
                 break;
 

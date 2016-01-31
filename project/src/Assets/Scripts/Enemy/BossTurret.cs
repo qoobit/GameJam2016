@@ -8,6 +8,8 @@ public class BossTurret : Enemy
     private EnemyBase enemyBase;
     private Animator animator;
 
+    private NavMeshAgent bossAgent;
+
     //For Animation States
     private bool isAttacking;
 
@@ -16,6 +18,7 @@ public class BossTurret : Enemy
     float dashAttackChargingStart = -1f;
     float dashAttackChargeDuration = 2.0f;
     float dashAttackChargingDuration = 0.75f;
+    float dashAttackSpeed = 50.0f;
 
 
 
@@ -37,6 +40,8 @@ public class BossTurret : Enemy
         blasterWeapon.transform.parent = body;
         weapon = blasterWeapon.GetComponent<Weapon>();
         weapon.weaponFireMode = 0;
+
+        bossAgent = GetComponent<NavMeshAgent>();
     }
 
     // Update is called once per frame
@@ -47,8 +52,7 @@ public class BossTurret : Enemy
         {
             if (head.currentState == EnemyHeadState.LOCKED)
             {
-                isAttacking = true;
-                fireWeapon();
+                dashAttack();
             }
             else
             {
@@ -65,7 +69,7 @@ public class BossTurret : Enemy
         {
             dashAttackChargeStart = Time.time;
         }
-        else if (Time.time < dashAttackChargeStart + dashAttackChargeDuration)
+        else if (Time.time >= dashAttackChargeStart + dashAttackChargeDuration)
         {
             if (dashAttackChargingStart < 0)
             {
@@ -73,16 +77,25 @@ public class BossTurret : Enemy
             }
             else if (Time.time < dashAttackChargingStart + dashAttackChargingDuration)
             {
-
+                //Do charging attack
+                bossAgent.enabled = false;
+                this.transform.position += this.transform.forward * dashAttackSpeed * Time.deltaTime;
+                isAttacking = false;
             }
             else
             {
-                //Do charging attack
+                //Finished Charging Attack
+                enemyBase.CurrentState = EnemyBaseState.PATROL;
+                bossAgent.enabled = true;
+                isAttacking = false;
+                dashAttackChargeStart = -1f;
+                dashAttackChargingStart = -1f;
             }
         }
         else
         {
             //Do Charging up
+            isAttacking = true;
         }
 
     }
