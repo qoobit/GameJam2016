@@ -30,12 +30,12 @@ public class Hero : Damageable {
     public Weapon weapon;
 
     bool lockToTarget;
-    GameObject lockedObject;
-
-
     
-	// Use this for initialization
-	void Start () {
+    GameObject lockedObject;
+    GameObject hmdLockedObject;
+    
+    // Use this for initialization
+    void Start () {
         lockToTarget = false;
         
         speed = 0.2f;
@@ -43,6 +43,7 @@ public class Hero : Damageable {
         //hp
         health = new Guage();
         spawnPoint = gameObject.transform.position;
+        Debug.Log("C");
         dashAllowed = false;
 
         Physics.gravity = new Vector3(0, -50, 0);
@@ -143,7 +144,8 @@ public class Hero : Damageable {
 
     // Update is called once per frame
     void Update() {
-        
+
+        //Debug.Log(dashAllowed + " " + state + " " + onFloor);
         ((Blaster)weapon).bulletReloadTime = 0.01f;
         ((Blaster)weapon).clipReloadTime = 0f;
         weapon.weaponFireMode = (int)BlasterMode.STRAIGHT;
@@ -186,6 +188,7 @@ public class Hero : Damageable {
                     state = HeroState.IDLE;
                     gameObject.GetComponent<Rigidbody>().isKinematic = true;
                     gameObject.GetComponent<Rigidbody>().useGravity = true;
+                    dashAllowed = true;
                 }
                 break;
             
@@ -230,7 +233,7 @@ public class Hero : Damageable {
         Material greenMat = Resources.Load("Materials/Green", typeof(Material)) as Material;
         Vector3 directionToTarget = Vector3.zero;
 
-        lockedObject = null;
+        hmdLockedObject = null;
         //reset materials to white
 
         GameObject[] targets = GameObject.FindGameObjectsWithTag("Target");
@@ -254,7 +257,8 @@ public class Hero : Damageable {
         layerMask |= (1 << LayerMask.NameToLayer("Enemy"));
 
         Crosshair.SetActive(false);
-        if (Physics.SphereCast(Camera.main.transform.position, 3f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
+        Camera.main.gameObject.transform.GetChild(0).gameObject.SetActive(false);
+        if (Physics.SphereCast(Camera.main.transform.position, 5f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
         {
             if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)
             {
@@ -262,31 +266,43 @@ public class Hero : Damageable {
             }
 
             SetSkinnedMeshRendererColor(hit.collider.gameObject, new Color(0, 255f/255f, 86f/255f,0f));
-                    
-                
-                
-            lockedObject = hit.collider.gameObject;
 
-            
+            Camera.main.gameObject.transform.GetChild(0).gameObject.SetActive(true);
+            hmdLockedObject = hit.collider.gameObject;
 
-            if (lockToTarget)
+            Vector3 targetCenter = hmdLockedObject.transform.TransformPoint(gameObject.GetComponent<CapsuleCollider>().center);
+            Vector3 directionToCenter = targetCenter - Camera.main.transform.position;
+            directionToCenter.Normalize();
+            Camera.main.gameObject.transform.GetChild(0).gameObject.transform.position = targetCenter - (directionToCenter * 3f);
+
+            if (lockToTarget&&lockedObject==null)
             {
-                Crosshair.SetActive(true);
-
-
-                directionToTarget = hit.collider.gameObject.transform.position - gameObject.transform.position;
-                facing = directionToTarget;
-                float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
-                angleToTarget *= Mathf.Sign(Vector3.Cross(Vector3.forward, directionToTarget).y);
-
-                gameObject.transform.localEulerAngles = new Vector3(0, angleToTarget, 0);
-
-                directionToTarget.Normalize();
-                Crosshair.transform.position = hit.collider.gameObject.transform.position - (directionToTarget * 3f);
+                lockedObject = hmdLockedObject;
             }
             
         }
 
+
+        if (lockedObject != null)
+        {
+            Crosshair.SetActive(true);
+
+            //face target
+            directionToTarget = lockedObject.transform.position - gameObject.transform.position;
+            directionToTarget.Normalize();
+            facing = directionToTarget;
+            float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
+            angleToTarget *= Mathf.Sign(Vector3.Cross(Vector3.forward, directionToTarget).y);
+
+            gameObject.transform.localEulerAngles = new Vector3(0, angleToTarget, 0);
+
+            Vector3 heroCenter = gameObject.transform.TransformPoint(gameObject.GetComponent<CapsuleCollider>().center);
+            Vector3 targetCenter = lockedObject.transform.TransformPoint(gameObject.GetComponent<CapsuleCollider>().center);
+            Vector3 directionToCenter = targetCenter - heroCenter;
+
+            directionToCenter.Normalize();
+            Crosshair.transform.position = targetCenter - (directionToCenter * 3f);
+        }
 
         return directionToTarget;
     }
@@ -366,8 +382,8 @@ public class Hero : Damageable {
             movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
             gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
 
-            state = HeroState.WALKING;
-            if (!lockToTarget || lockedObject == null)
+            if(state!=HeroState.DASHING) state = HeroState.WALKING;
+            if (lockedObject == null)
             {
                 facing = movementUnit;
             }
@@ -392,10 +408,18 @@ public class Hero : Damageable {
         if (direction.magnitude != 0f)
         {
             facing = Quaternion.Euler(0, theta, 0) * directionUnit;
-            if (!lockToTarget)
+            if (lockedObject==null)
             {
                 facing = direction;
                 //facing = direction;
+                
+            }
+            else
+            {
+                Vector3 directionToTarget = lockedObject.transform.position - gameObject.transform.position;
+                directionToTarget.Normalize();
+                facing = directionToTarget;
+                
             }
         }
 
@@ -406,10 +430,11 @@ public class Hero : Damageable {
     {
         if (Input.GetButtonDown("B"))
         {
+            
             if (state != HeroState.DASHING && dashAllowed)
             {
                 if (onFloor) spawnPoint = gameObject.transform.position;
-                if ((lockToTarget && lockedObject != null))
+                if (lockedObject != null)
                 {
                     directionToTarget = lockedObject.transform.position - gameObject.transform.position;
                     directionToTarget.Normalize();
@@ -427,6 +452,7 @@ public class Hero : Damageable {
                     state = HeroState.DASHING;
                     dashAge = 0f;
                     //onFloor = false;
+
                     dashAllowed = false;
                 }
             }
@@ -437,19 +463,13 @@ public class Hero : Damageable {
     {
         if (Input.GetButtonDown("A"))
         {
-
-            if (state != HeroState.DASHING)
+            if (onFloor)
             {
-
-                if (onFloor)
-                {
-                    gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
-                    gameObject.GetComponent<Rigidbody>().useGravity = true;
-                    state = HeroState.JUMPING;
-                    onFloor = false;
-                    spawnPoint = gameObject.transform.position;
-
-                }
+                gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
+                gameObject.GetComponent<Rigidbody>().useGravity = true;
+                state = HeroState.JUMPING;
+                onFloor = false;
+                spawnPoint = gameObject.transform.position;
 
             }
         }
@@ -470,6 +490,7 @@ public class Hero : Damageable {
         {
             RealignHMD();
         }
+        
     }
 
     private void doLockToTarget()
@@ -482,6 +503,7 @@ public class Hero : Damageable {
         else
         {
             lockToTarget = false;
+            lockedObject = null;
         }
     }
 }

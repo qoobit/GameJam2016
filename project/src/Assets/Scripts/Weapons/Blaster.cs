@@ -79,7 +79,7 @@ public class Blaster : Weapon
         projectile.direction = direction;
         projectile.owner = this.transform.parent.gameObject;
         //bullet.layer = projectile.owner.layer;
-        Debug.Log(LayerMask.LayerToName(projectile.owner.layer) + " Projectile");
+
         bullet.layer = LayerMask.NameToLayer(LayerMask.LayerToName(projectile.owner.layer) + " Projectile");
         projectile.speed = bulletSpeed;
         projectile.damage = damage;
