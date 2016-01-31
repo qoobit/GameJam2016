@@ -49,11 +49,12 @@ public class EnemyBase : MonoBehaviour
         switch (CurrentState)
         {
             case EnemyBaseState.IDLE:
-                agent.Stop();
+                if (agent.isActiveAndEnabled && agent.isOnNavMesh)
+                    agent.Stop();
                 break;
 
             case EnemyBaseState.PATROL:
-                if (agent.isOnNavMesh)
+                if (agent.isActiveAndEnabled && agent.isOnNavMesh)
                     agent.Resume();
 
                 this.updatePatrol();
@@ -64,7 +65,7 @@ public class EnemyBase : MonoBehaviour
                 break;
 
             case EnemyBaseState.OFFENSE:
-                if (agent.isActiveAndEnabled)
+                if (agent.isActiveAndEnabled && agent.isOnNavMesh)
                     agent.Stop();
                 this.updateOffense();
                 break;
