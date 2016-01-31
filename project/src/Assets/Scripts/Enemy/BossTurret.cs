@@ -79,7 +79,8 @@ public class BossTurret : Enemy
             {
                 //Do charging attack
                 bossAgent.enabled = false;
-                this.transform.position += this.transform.forward * dashAttackSpeed * Time.deltaTime;
+                Vector3 forwardNoY = new Vector3(this.transform.forward.x, 0f, this.transform.forward.z);
+                this.transform.position += forwardNoY.normalized * dashAttackSpeed * Time.deltaTime;
                 isAttacking = false;
             }
             else
