@@ -66,8 +66,6 @@ public class Hero : Damageable {
 
     void OnTriggerStay(Collider other)
     {
-        //Debug.Log(gameObject.name + " " + other.name + " " + onFloor + " " + state);
-
         if (other.gameObject.layer == LayerMask.NameToLayer("Targets"))
         {
             if (state == HeroState.DASHING)
@@ -96,7 +94,6 @@ public class Hero : Damageable {
         
 
         if (GameControl.control.level != null) {
-            Debug.Log("COL" + col.gameObject.tag);
             if (col.gameObject.tag == "Platform")
             {
                 state = HeroState.IDLE;
@@ -197,135 +194,7 @@ public class Hero : Damageable {
                 break;
         }
 
-        //controller movement
-        Vector3 movement = new Vector3(-Input.GetAxisRaw("LeftJoystickX"), 0, Input.GetAxisRaw("LeftJoystickY"));
-        Vector3 movementUnit = movement.normalized;
-        movementUnit = Quaternion.Euler(0, 180, 0) * movementUnit;
-
-        float theta = Vector3.Angle(Vector3.forward, hmdForward);
-        theta *= Mathf.Sign(Vector3.Cross(Vector3.forward, hmdForward).y);
-
-        if (movement.magnitude != 0f)
-        {
-            movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
-            gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
-                
-            state = HeroState.WALKING;
-            if (!lockToTarget||lockedObject==null)
-            {
-                facing = movementUnit;
-            }
-        }
-        else
-        {
-            if (state == HeroState.WALKING)
-            {
-                state = HeroState.IDLE;
-            }
-                
-        }
-        
-        
-
-        //controller rotation
-        Vector3 direction = new Vector3(-Input.GetAxisRaw("RightJoystickX"), 0, Input.GetAxisRaw("RightJoystickY"));
-        Vector3 directionUnit = direction.normalized;
-        directionUnit = Quaternion.Euler(0, 180, 0) * directionUnit;
-
-        if (direction.magnitude != 0f)
-        {
-            facing = Quaternion.Euler(0, theta, 0) * directionUnit;
-            if (!lockToTarget)
-            {
-                facing = direction;
-                //facing = direction;
-            }
-        }
-
-        UpdateTransform();
-
-
-        //highlight object being looked at
-
-        Vector3 directionToTarget = HighlightTarget();
-
-        
-        //controller buttons
-        if (Input.GetButtonDown("A"))
-        {
-            
-            if (state != HeroState.DASHING)
-            {
-
-                if (onFloor)
-                {
-                    gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
-                    gameObject.GetComponent<Rigidbody>().useGravity = true;
-                    state = HeroState.JUMPING;
-                    onFloor = false;
-                    
-                    Debug.Log("LEAVING");
-                    spawnPoint = gameObject.transform.position;
-
-                }
-
-            }
-            
-            
-        }
-        else if (Input.GetButtonDown("B"))
-        {
-
-            if (state != HeroState.DASHING&&dashAllowed)
-            {
-                if(onFloor) spawnPoint = gameObject.transform.position;
-                if ((lockToTarget && lockedObject != null))
-                {
-                    directionToTarget = lockedObject.transform.position - gameObject.transform.position;
-                    Debug.Log(lockedObject.transform.position + " " + gameObject.transform.position + " " + directionToTarget);
-                    directionToTarget.Normalize();
-                    gameObject.GetComponent<Rigidbody>().AddForce(directionToTarget * 20000f);
-                    gameObject.GetComponent<Rigidbody>().useGravity = false;
-                    state = HeroState.DASHING;
-                    dashAge = 0f;
-                    //onFloor = false;
-                    dashAllowed = false;
-                }
-                else {
-                    facing.Normalize();
-                    gameObject.GetComponent<Rigidbody>().AddForce(facing * 10000f);
-                    gameObject.GetComponent<Rigidbody>().useGravity = false;
-                    state = HeroState.DASHING;
-                    dashAge = 0f;
-                    //onFloor = false;
-                    dashAllowed = false;
-                }
-
-
-            }
-        }
-
-        if (Input.GetButtonDown("X"))
-        {
-            if (weapon != null)
-                weapon.Fire();
-        }
-
-        if (Input.GetButtonDown("RB"))
-        {
-            RealignHMD();
-        }
-
-        if (Input.GetAxisRaw("RT") < 0f)
-        {
-            //lock
-            lockToTarget = true;
-        }
-        else
-        {
-            lockToTarget = false;
-        }
-        
+        applyInputsToCharacter();        
 
         //Debug Lines
 
@@ -375,7 +244,6 @@ public class Hero : Damageable {
             {
                 targets[i].GetComponent<MeshRenderer>().material = whiteMat;
             }
-            Debug.Log("SETTING WHITE");
             SetSkinnedMeshRendererColor(targets[i], new Color(1f, 1f, 1f,1f));
                 
         }
@@ -464,5 +332,156 @@ public class Hero : Damageable {
         /*
         }
         */
+    }
+
+
+
+    private void applyInputsToCharacter()
+    {
+        float theta = Vector3.Angle(Vector3.forward, hmdForward);
+        theta *= Mathf.Sign(Vector3.Cross(Vector3.forward, hmdForward).y);
+
+        moveCharacter(theta);
+        rotateCharacter(theta);
+
+        //highlight object being looked at
+        Vector3 directionToTarget = HighlightTarget();
+
+        doCharacterDash(directionToTarget);
+        doCharacterJump();
+        doCharacterFire();
+        doRealignHMD();
+        doLockToTarget();
+    }
+
+    private void moveCharacter(float theta)
+    {
+        //controller movement
+        Vector3 movement = new Vector3(-Input.GetAxisRaw("LeftJoystickX"), 0, Input.GetAxisRaw("LeftJoystickY"));
+        Vector3 movementUnit = movement.normalized;
+        movementUnit = Quaternion.Euler(0, 180, 0) * movementUnit;
+
+        if (movement.magnitude != 0f)
+        {
+            movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
+            gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
+
+            state = HeroState.WALKING;
+            if (!lockToTarget || lockedObject == null)
+            {
+                facing = movementUnit;
+            }
+        }
+        else
+        {
+            if (state == HeroState.WALKING)
+            {
+                state = HeroState.IDLE;
+            }
+
+        }
+    }
+
+    private void rotateCharacter(float theta)
+    {
+        //controller rotation
+        Vector3 direction = new Vector3(-Input.GetAxisRaw("RightJoystickX"), 0, Input.GetAxisRaw("RightJoystickY"));
+        Vector3 directionUnit = direction.normalized;
+        directionUnit = Quaternion.Euler(0, 180, 0) * directionUnit;
+
+        if (direction.magnitude != 0f)
+        {
+            facing = Quaternion.Euler(0, theta, 0) * directionUnit;
+            if (!lockToTarget)
+            {
+                facing = direction;
+                //facing = direction;
+            }
+        }
+
+        UpdateTransform();
+    }
+
+    private void doCharacterDash(Vector3 directionToTarget)
+    {
+        if (Input.GetButtonDown("B"))
+        {
+            if (state != HeroState.DASHING && dashAllowed)
+            {
+                if (onFloor) spawnPoint = gameObject.transform.position;
+                if ((lockToTarget && lockedObject != null))
+                {
+                    directionToTarget = lockedObject.transform.position - gameObject.transform.position;
+                    directionToTarget.Normalize();
+                    gameObject.GetComponent<Rigidbody>().AddForce(directionToTarget * 20000f);
+                    gameObject.GetComponent<Rigidbody>().useGravity = false;
+                    state = HeroState.DASHING;
+                    dashAge = 0f;
+                    //onFloor = false;
+                    dashAllowed = false;
+                }
+                else {
+                    facing.Normalize();
+                    gameObject.GetComponent<Rigidbody>().AddForce(facing * 10000f);
+                    gameObject.GetComponent<Rigidbody>().useGravity = false;
+                    state = HeroState.DASHING;
+                    dashAge = 0f;
+                    //onFloor = false;
+                    dashAllowed = false;
+                }
+            }
+        }
+    }
+
+    private void doCharacterJump()
+    {
+        if (Input.GetButtonDown("A"))
+        {
+
+            if (state != HeroState.DASHING)
+            {
+
+                if (onFloor)
+                {
+                    gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
+                    gameObject.GetComponent<Rigidbody>().useGravity = true;
+                    state = HeroState.JUMPING;
+                    onFloor = false;
+                    spawnPoint = gameObject.transform.position;
+
+                }
+
+            }
+        }
+    }
+
+    private void doCharacterFire()
+    {
+        if (Input.GetButtonDown("X"))
+        {
+            if (weapon != null)
+                weapon.Fire();
+        }
+    }
+
+    private void doRealignHMD()
+    {
+        if (Input.GetButtonDown("RB"))
+        {
+            RealignHMD();
+        }
+    }
+
+    private void doLockToTarget()
+    {
+        if (Input.GetAxisRaw("RT") < 0f)
+        {
+            //lock
+            lockToTarget = true;
+        }
+        else
+        {
+            lockToTarget = false;
+        }
     }
 }
