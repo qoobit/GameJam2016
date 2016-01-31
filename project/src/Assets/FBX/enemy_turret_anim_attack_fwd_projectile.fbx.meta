@@ -1,0 +1,173 @@
+fileFormatVersion: 2
+guid: 650cf25b9ad1fa34b9e8a47bc84cc3e7
+timeCreated: 1454219500
+licenseType: Free
+ModelImporter:
+  serializedVersion: 19
+  fileIDToRecycleName:
+    100000: antenna01
+    100002: antenna02
+    100004: antenna03
+    100006: antenna04
+    100008: antenna_end
+    100010: base
+    100012: base_ball_end
+    100014: brow_left
+    100016: brow_left_end
+    100018: brow_right
+    100020: brow_right_end
+    100022: enemy_turret
+    100024: //RootNode
+    100026: head
+    100028: head_end
+    100030: root
+    100032: spine
+    400000: antenna01
+    400002: antenna02
+    400004: antenna03
+    400006: antenna04
+    400008: antenna_end
+    400010: base
+    400012: base_ball_end
+    400014: brow_left
+    400016: brow_left_end
+    400018: brow_right
+    400020: brow_right_end
+    400022: enemy_turret
+    400024: //RootNode
+    400026: head
+    400028: head_end
+    400030: root
+    400032: spine
+    2300000: enemy_turret
+    3300000: enemy_turret
+    4300000: enemy_turret
+    7400000: enemy_turret_anim_attack_fwd_projectile
+    9500000: //RootNode
+    13700000: enemy_turret
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleRotations: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: enemy_turret_anim_attack_fwd_projectile
+      takeName: enemy_turret_anim_attack_fwd_projectile
+      firstFrame: 1
+      lastFrame: 12
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: enemy_turret
+        weight: 1
+      - path: root
+        weight: 1
+      - path: root/base
+        weight: 1
+      - path: root/base/base_ball_end
+        weight: 1
+      - path: root/base/spine
+        weight: 1
+      - path: root/base/spine/head
+        weight: 1
+      - path: root/base/spine/head/antenna01
+        weight: 1
+      - path: root/base/spine/head/antenna01/antenna02
+        weight: 1
+      - path: root/base/spine/head/antenna01/antenna02/antenna03
+        weight: 1
+      - path: root/base/spine/head/antenna01/antenna02/antenna03/antenna04
+        weight: 1
+      - path: root/base/spine/head/antenna01/antenna02/antenna03/antenna04/antenna_end
+        weight: 1
+      - path: root/base/spine/head/brow_left
+        weight: 1
+      - path: root/base/spine/head/brow_left/brow_left_end
+        weight: 1
+      - path: root/base/spine/head/brow_right
+        weight: 1
+      - path: root/base/spine/head/brow_right/brow_right_end
+        weight: 1
+      - path: root/base/spine/head/head_end
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 1
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importBlendShapes: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

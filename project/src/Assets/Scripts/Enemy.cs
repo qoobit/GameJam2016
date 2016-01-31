@@ -30,7 +30,7 @@ public class Enemy : Damageable
         
         
         Damageable dmg = other.gameObject.GetComponent<Damageable>();
-        dmg.Hurt(baseDamage, this.gameObject);
+        if(dmg!=null) dmg.Hurt(baseDamage, this.gameObject);
         
     
     }

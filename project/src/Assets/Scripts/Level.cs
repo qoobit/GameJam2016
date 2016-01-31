@@ -12,6 +12,8 @@ public class Level : MonoBehaviour
     public List<GameObject> bullets = new List<GameObject>();
     public List<GameObject> targets = new List<GameObject>();
 
+    public List<GameObject> portals = new List<GameObject>();
+
 
     void AddTarget(GameObject t)
     {
