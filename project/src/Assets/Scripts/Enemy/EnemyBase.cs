@@ -87,11 +87,9 @@ public class EnemyBase : MonoBehaviour
     {
         if (!agent.enabled||!agent.isOnNavMesh) return;
         float distanceRemaining = Vector3.Magnitude(agent.destination - this.transform.position) - agent.radius;
-        
+
         if (distanceRemaining <= WaypointThreshold)
-        {
-            Debug.Log(agent.isOnNavMesh);
-            
+        {            
             agent.SetDestination(this.findRandomTargetPosition());
         }
 
@@ -124,7 +122,6 @@ public class EnemyBase : MonoBehaviour
                 throw new System.Exception("No waypoints found in waypoint collection");
 
             int randomIndex = Random.Range(0, waypointList.Count);
-
             return waypointList[randomIndex].position;
         }
             
@@ -134,6 +131,9 @@ public class EnemyBase : MonoBehaviour
 
     public Vector3 GetVelocity()
     {
+        if (agent == null)
+            return Vector3.zero;
+
         return agent.velocity;
     }
 }
