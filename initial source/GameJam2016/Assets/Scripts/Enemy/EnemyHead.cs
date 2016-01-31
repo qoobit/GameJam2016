@@ -5,27 +5,33 @@ public enum EnemyHeadState { SEARCHING, LOCKED }
 
 public class EnemyHead : MonoBehaviour
 {
-    public float RotationPeriod = 2.0f;
-    public float RotationLimitX = 75.0f;
-    public float RotationLimitY = 10.0f;
+    public float RotationLimitY = 75.0f;
+    public float RotationLimitX = 10.0f;
+    public float RotationMaxVelocity = 135.0f;
+    public float SphereCastRadius = 0.5f;
+    public float SphereCastDistance = 15.0f;
 
     private Transform head;
     private Transform body;
-    private EnemyHeadState currentState;
-    private Transform lookAtTarget;
-    private float searchStartTime = 0.0f;
-    private bool searchingLeft = true;
+    public EnemyHeadState currentState;
+    public Transform lookAtTarget;
+    private Quaternion targetRotation;
+    private Quaternion lookingLeft;
+    private Quaternion lookingRight;
 
     // Use this for initialization
     void Start()
     {
         head = this.transform.FindChild("Head");
         body = this.transform.FindChild("Body");
-        if (head == null)
-            throw new System.Exception("Unable to find Head");
-        if (body == null)
-            throw new System.Exception("Unable to find Body");
-    }
+
+        if (head == null) throw new System.Exception("Unable to find Head");
+        if (body == null) throw new System.Exception("Unable to find Body");
+
+        targetRotation = head.localRotation;
+        lookingLeft = Quaternion.AngleAxis(-RotationLimitY, Vector3.up);
+        lookingRight = Quaternion.AngleAxis(RotationLimitY, Vector3.up);
+}
 
     // Update is called once per frame
     void Update()
@@ -35,6 +41,7 @@ public class EnemyHead : MonoBehaviour
         {
             case EnemyHeadState.SEARCHING:
                 this.updateSearching();
+                this.lookForHero();
                 break;
 
             case EnemyHeadState.LOCKED:
@@ -42,38 +49,55 @@ public class EnemyHead : MonoBehaviour
                 break;
         }
     }
-
+    
     private void updateSearching()
     {
-        if (this.searchStartTime <= 0.0f) //Initialize the value if not set
-            this.searchStartTime = Time.time;
+        //Quaternion localHeadRotation = 
+        head.localRotation = Quaternion.RotateTowards(head.localRotation, targetRotation, this.RotationMaxVelocity * Time.deltaTime);
+        
+        //Project head.forward vector on to body.up plane
+        float dot = -Vector3.Dot(head.forward, body.up);
+        Vector3 headForwardProjected = (head.forward + (body.up * dot)).normalized;
 
-        float deltaTime = Time.time - this.searchStartTime;
+        //Get our current Y rotation
+        float headRotationY = Vector3.Angle(headForwardProjected, body.forward);
 
-        Quaternion lookingLeft = Quaternion.AngleAxis(-RotationLimitX, Vector3.up); //Looking left
-        Quaternion lookingRight = Quaternion.AngleAxis(RotationLimitX, Vector3.up); //Looking right
+        //Check if we have over rotated
+        if (headRotationY > this.RotationLimitY)
+            head.localRotation = targetRotation;
 
-        float halfPeriod = this.RotationPeriod / 2;
+        //If we are close enough to our targetRotation, get next targetRotation
+        float remainder = Quaternion.Angle(head.localRotation, targetRotation);
+        if (remainder <= 0.5f)
+            targetRotation = this.getNextSearchTargetRotation();
 
-        float remaining = 0f;
-        if (this.searchingLeft == true)
+        Debug.DrawRay(head.position, head.forward * SphereCastDistance, Color.red);
+        return;
+    }
+
+    private void lookForHero()
+    {
+        RaycastHit hitInfo;
+        Physics.SphereCast(head.position, SphereCastRadius, head.forward, out hitInfo, SphereCastDistance);
+
+        if (hitInfo.collider == null)
+            return;
+
+        //Check if the collider belongs to Hero
+        Transform currentTransform = hitInfo.collider.transform;
+        do
         {
-            head.localRotation = Quaternion.Lerp(lookingRight, lookingLeft, (deltaTime % halfPeriod) / halfPeriod);
-            remaining = Quaternion.Angle(head.localRotation, lookingLeft);
-        }
-        else
-        {
-            head.localRotation = Quaternion.Lerp(lookingLeft, lookingRight, (deltaTime % halfPeriod) / halfPeriod);
-            remaining = Quaternion.Angle(head.localRotation, lookingRight);
-        }
-
-        if (remaining <= 5.0f)
-        {
-            this.searchStartTime = Time.time;
-            this.searchingLeft = !this.searchingLeft;
-        }
-
-        Debug.DrawRay(head.position, head.forward * 200, Color.red);
+            if (currentTransform.name == "Hero")
+            {
+                this.LookAt(currentTransform);
+                currentState = EnemyHeadState.LOCKED;
+                break;
+            }
+            else
+            {
+                currentTransform = currentTransform.parent;
+            }
+        } while (currentTransform != null);
     }
 
     private void updateLocked()
@@ -81,6 +105,9 @@ public class EnemyHead : MonoBehaviour
         if (lookAtTarget == null)
             return;
 
+        //Turn the body towards our target but remain upright
+        Vector3 lookAtVector = lookAtTarget.position - new Vector3(0, lookAtTarget.position.y - body.position.y, 0);
+        body.LookAt(lookAtVector);
         head.LookAt(lookAtTarget);
     }
 
@@ -88,7 +115,7 @@ public class EnemyHead : MonoBehaviour
     {
         if (currentState != EnemyHeadState.SEARCHING)
         {
-            this.searchStartTime = Time.time;
+            targetRotation = this.getRandomSearchTargetRotation();
             currentState = EnemyHeadState.SEARCHING;
         }
     }
@@ -97,5 +124,23 @@ public class EnemyHead : MonoBehaviour
     {
         lookAtTarget = target;
         currentState = EnemyHeadState.LOCKED;
+    }
+
+
+
+    private Quaternion getRandomSearchTargetRotation()
+    {
+        if (Random.Range(0, 1) == 0)
+            return lookingLeft;
+        else
+            return lookingRight;
+    }
+
+    private Quaternion getNextSearchTargetRotation()
+    {
+        if (targetRotation.Equals(lookingLeft))
+            return lookingRight;
+        else
+            return lookingLeft;
     }
 }

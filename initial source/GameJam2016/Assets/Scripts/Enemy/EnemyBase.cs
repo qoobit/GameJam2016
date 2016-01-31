@@ -27,9 +27,11 @@ public class EnemyBase : MonoBehaviour
         switch (CurrentState)
         {
             case EnemyBaseState.IDLE:
+                agent.Stop();
                 break;
 
             case EnemyBaseState.PATROL:
+                agent.Resume();
                 this.updatePatrol();
                 if (head != null)
                 {

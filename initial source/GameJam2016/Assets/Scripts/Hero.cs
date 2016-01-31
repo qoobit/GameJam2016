@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 public enum HeroState { IDLE, WALKING, JUMPING, DASHING, AIR_DASHING, SHOOTING };
 public enum DamageState { HEALTHY, STUNNED, DEAD };
-public class Hero : MonoBehaviour {
+
+public class Hero : Damageable {
     public float hp;
-    public WeaponState weaponState;
     public Vector3 hmdForward;
     public Vector3 facing;
     public DamageState damageState = DamageState.HEALTHY;
@@ -29,8 +29,7 @@ public class Hero : MonoBehaviour {
 
     Guage health;
     public Weapon weapon;
-    
-    
+
     bool lockToTarget;
     GameObject lockedObject;
 
@@ -49,10 +48,6 @@ public class Hero : MonoBehaviour {
         health = new Guage();
         spawnPoint = gameObject.transform.position;
         dashAllowed = false;
-        
-        weapon = new Weapon();
-        weapon.state = WeaponState.GUN;
-        weapon.damage = 40f;
 
         Physics.gravity = new Vector3(0, -50, 0);
         bulletObject = Resources.Load("Projectile", typeof(GameObject));
@@ -88,7 +83,10 @@ public class Hero : MonoBehaviour {
         AddTarget(GameObject.Find("Turret (1)"));
         AddTarget(GameObject.Find("Turret (2)"));
 
-
+        //Load a blaster as our weapon
+        Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
+        GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, Quaternion.identity) as GameObject;
+        weapon = blasterWeapon.GetComponent<Weapon>();
     }
     void AddTarget(GameObject t)
     {
@@ -99,34 +97,6 @@ public class Hero : MonoBehaviour {
         if(platform!=null) platforms.Add(platform);
     }
 
-    void TakeDamage(float dmg)
-    {
-        health.value -= dmg;
-        if (health.value < 0)
-        {
-            damageState = DamageState.DEAD;
-            GameControl.control.lives--;
-            if (GameControl.control.lives == 0)
-            {
-                //game over
-
-            }
-            else
-            {
-                //goto spawn point
-                gameObject.transform.position = spawnPoint;
-                health.value = 100f;
-                damageState = DamageState.STUNNED;
-                stunAge = stunCooldown;
-            }
-        }
-        else
-        {
-            damageState = DamageState.STUNNED;
-            stunAge = stunCooldown;
-        }
-
-    }
     void OnTriggerStay(Collider other)
     {
 
@@ -138,26 +108,9 @@ public class Hero : MonoBehaviour {
                 other.gameObject.GetComponent<Enemy>().Explode();
                 dashAllowed = true;
             }
-            else {
-                if (stunAge <= 0f)
-                {
-                    if (other.gameObject.GetComponent<Enemy>().baseDamage > 0f)
-                    {
-                        TakeDamage(other.gameObject.GetComponent<Enemy>().baseDamage);
-                    }
-                }
-            }
         }
 
-        if (other.gameObject.name== "Turret Projectile")
-        {
-            TakeDamage(other.gameObject.GetComponent<Projectile>().weapon.damage);
-        }
-        if (other.gameObject.name == "Pit")
-        {
-            
-            TakeDamage(other.gameObject.GetComponent<Enemy>().baseDamage);
-        }
+
     }
     void OnCollisionEnter(Collision col)
     {
@@ -205,7 +158,6 @@ public class Hero : MonoBehaviour {
 
         //update viewers
         hp = health.value;
-        weaponState = weapon.state;
 
         hmdForward = Camera.main.transform.forward;
         hmdForward.y = 0f;
@@ -395,17 +347,8 @@ public class Hero : MonoBehaviour {
 
         if (Input.GetButtonDown("X"))
         {
-            switch (weapon.state)
-            {
-                case WeaponState.GUN:
-                    GameObject bullet = Instantiate(bulletObject, gameObject.transform.position, Quaternion.identity) as GameObject;
-                    bullet.GetComponent<Projectile>().direction = facing;
-                    //bullet.transform.parent = hero.transform;
-                    bullet.name = "Hero Projectile";
-                    break;
-                default:
-                    break;
-            }
+            if (weapon != null)
+                weapon.Fire();
         }
 
         if (Input.GetButtonDown("RB"))
@@ -437,5 +380,41 @@ public class Hero : MonoBehaviour {
 
         //facing vector
         Debug.DrawLine(gameObject.transform.position, gameObject.transform.position + (facing * 100f), Color.green);
+    }
+
+    override public void Hurt(float damage, GameObject attacker)
+    {
+        //Don't take damage if we are stunned
+        if (stunAge > 0f) return;
+
+        health.value -= damage;
+        if (health.value <= 0)
+        {
+            this.Die();
+        }
+        else
+        {
+            damageState = DamageState.STUNNED;
+            stunAge = stunCooldown;
+        }
+    }
+
+    override public void Die()
+    {
+        damageState = DamageState.DEAD;
+        GameControl.control.lives--;
+        if (GameControl.control.lives == 0)
+        {
+            //game over
+
+        }
+        else
+        {
+            //goto spawn point
+            gameObject.transform.position = spawnPoint;
+            health.value = 100f;
+            damageState = DamageState.STUNNED;
+            stunAge = stunCooldown;
+        }
     }
 }

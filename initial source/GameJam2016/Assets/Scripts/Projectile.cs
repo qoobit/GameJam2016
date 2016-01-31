@@ -6,7 +6,7 @@ public class Projectile : MonoBehaviour {
     public float speed;
     public float lifetime;
     public float age;
-    public Weapon weapon;
+    public float damage;
     
 	// Use this for initialization
 	void Start () {
@@ -14,8 +14,6 @@ public class Projectile : MonoBehaviour {
         age = 0f;
         lifetime = 5f;
         direction.Normalize();
-        weapon = new Weapon();
-        weapon.damage = 10f;
 	}
 	
 	// Update is called once per frame
@@ -24,4 +22,12 @@ public class Projectile : MonoBehaviour {
         if (age > lifetime) Destroy(this.gameObject);
         this.gameObject.transform.position += direction * speed;
 	}
+
+    void OnCollisionEnter(Collision collision)
+    {
+        Damageable other = collision.gameObject.GetComponent<Damageable>();
+        other.Hurt(this.damage, this.gameObject);
+
+        Destroy(this.gameObject);
+    }
 }

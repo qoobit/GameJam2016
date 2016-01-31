@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Enemy : MonoBehaviour {
+public class Enemy : Damageable
+{
     public float hp;
     Guage guage;
     public float baseDamage;
@@ -12,7 +13,6 @@ public class Enemy : MonoBehaviour {
     
     void Start () {
         guage = new Guage();
-        weapon = new Weapon();
         explosionObject = Resources.Load("Explosion", typeof(GameObject));
         hp = 100f;
         baseDamage = 40f;
@@ -23,19 +23,6 @@ public class Enemy : MonoBehaviour {
 	void Update () {
         hp = guage.value;
 	}
-    void OnTriggerEnter(Collider other)
-    {
-        
-        if (other.name == "Hero Projectile")
-        {
-            
-            guage.value -= other.gameObject.GetComponent<Projectile>().weapon.damage;
-            Destroy(other.gameObject);
-            if (hp <= 0f) {
-                Explode();  
-            }
-        }
-    }
 
     public void Explode()
     {
@@ -43,5 +30,18 @@ public class Enemy : MonoBehaviour {
 
         Destroy(this.gameObject);
     }
-    
+
+    override public void Hurt(float damage, GameObject attacker)
+    {
+        guage.value -= damage;
+        if (hp <= 0f)
+        {
+            Explode();
+        }
+    }
+
+    override public void Die()
+    {
+        this.Explode();
+    }
 }
