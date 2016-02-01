@@ -15,8 +15,7 @@ public class ArenaLevel : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        GetComponent<Level>().AddPlatform(GameObject.Find("Floor"));
-        GetComponent<Level>().AddTarget(GameObject.Find("Pit"));
+        
 
         //Get all existing turrets in scene and save to turretList
         turretList = new List<GameObject>();
@@ -29,8 +28,6 @@ public class ArenaLevel : MonoBehaviour
         boss = null; //No boss yet
         arenaState = ArenaState.WARMUP; //Set arena state to WARMUP
 
-        GameControl.control.level = this.gameObject;
-
         //Get the exit portal and disable it for now
         portalEntry = GameObject.Find("Portal Entry");
         portalExit = GameObject.Find("Portal Exit");
@@ -40,6 +37,8 @@ public class ArenaLevel : MonoBehaviour
 	// Update is called once per frame
 	void Update ()
     {
+        GameControl.control.level = this.gameObject;
+
         switch (arenaState)
         {
             case ArenaState.WARMUP:
@@ -93,7 +92,7 @@ public class ArenaLevel : MonoBehaviour
 
     private void updateBossFightState()
     {
-        if (boss.GetComponent<BossTurret>().isAlive() == false)
+        if (boss==null||boss.GetComponent<BossTurret>().isAlive() == false)
             arenaState = ArenaState.BOSSDEFEATED;
     }
 

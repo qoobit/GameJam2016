@@ -43,7 +43,7 @@ public class Hero : Damageable {
         //hp
         health = new Guage();
         spawnPoint = gameObject.transform.position;
-        Debug.Log("C");
+
         dashAllowed = false;
 
         Physics.gravity = new Vector3(0, -50, 0);
@@ -100,6 +100,8 @@ public class Hero : Damageable {
                 state = HeroState.IDLE;
                 onFloor = true;
                 dashAllowed = true;
+                GetComponent<Animator>().SetBool("jumping", false);
+                GetComponent<Animator>().SetBool("dashing", false);
             }
 
         }
@@ -107,7 +109,17 @@ public class Hero : Damageable {
         
     }
 
-
+    void SetSkinnedMeshRendererEnabled(GameObject go, bool enabled)
+    {
+        if (go.GetComponent<SkinnedMeshRenderer>() != null)
+        {
+            go.GetComponent<SkinnedMeshRenderer>().enabled = enabled;
+        }
+        foreach (Transform child in go.transform)
+        {
+            SetSkinnedMeshRendererEnabled(child.gameObject, enabled);
+        }
+    }
     void SetMeshRendererEnabled(GameObject go,bool enabled)
     {
         if (go.GetComponent<MeshRenderer>() != null)
@@ -144,7 +156,7 @@ public class Hero : Damageable {
 
     // Update is called once per frame
     void Update() {
-
+        //Debug.Log(GameObject.Find("Focal").transform.localPosition+" "+ GameObject.Find("Focal").transform.position);
         //Debug.Log(dashAllowed + " " + state + " " + onFloor);
         ((Blaster)weapon).bulletReloadTime = 0.01f;
         ((Blaster)weapon).clipReloadTime = 0f;
@@ -161,12 +173,12 @@ public class Hero : Damageable {
         //blink stunned hero
         if (damageState == DamageState.STUNNED)
         {
-            SetMeshRendererEnabled(gameObject,!gameObject.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().enabled);
+            SetSkinnedMeshRendererEnabled(gameObject,!gameObject.transform.GetChild(0).GetChild(0).gameObject.GetComponent<SkinnedMeshRenderer>().enabled);
             stunAge -= Time.deltaTime;
             if (stunAge <= 0f)
             {
                 damageState = DamageState.HEALTHY;
-                SetMeshRendererEnabled(gameObject, true);
+                SetSkinnedMeshRendererEnabled(gameObject, true);
             }
         }
 
@@ -189,6 +201,7 @@ public class Hero : Damageable {
                     gameObject.GetComponent<Rigidbody>().isKinematic = true;
                     gameObject.GetComponent<Rigidbody>().useGravity = true;
                     dashAllowed = true;
+                    GetComponent<Animator>().SetBool("dashing", false);
                 }
                 break;
             
@@ -220,9 +233,9 @@ public class Hero : Damageable {
     public void RealignHMD()
     {
         //gameObject.transform.position = spawnPoint;
-
+        //Debug.Log(gameObject.transform.position+" "+facing+" "+ GameObject.Find("Focal").transform.position);
         cameraRig.transform.position = gameObject.transform.position - (facing * 10f);
-        cameraRig.transform.position += new Vector3(0, 10f, 0f);
+        cameraRig.transform.position += new Vector3(0, 20f, 0f);
         cameraRig.transform.LookAt(GameObject.Find("Focal").transform);
     }
     Vector3 HighlightTarget()
@@ -257,7 +270,10 @@ public class Hero : Damageable {
         layerMask |= (1 << LayerMask.NameToLayer("Enemy"));
 
         Crosshair.SetActive(false);
+        //Debug.Log(Camera.main.gameObject.transform.GetChild(0).gameObject.name);
         Camera.main.gameObject.transform.GetChild(0).gameObject.SetActive(false);
+
+
         if (Physics.SphereCast(Camera.main.transform.position, 5f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
         {
             if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)
@@ -266,7 +282,7 @@ public class Hero : Damageable {
             }
 
             SetSkinnedMeshRendererColor(hit.collider.gameObject, new Color(0, 255f/255f, 86f/255f,0f));
-
+            
             Camera.main.gameObject.transform.GetChild(0).gameObject.SetActive(true);
             hmdLockedObject = hit.collider.gameObject;
 
@@ -339,15 +355,22 @@ public class Hero : Damageable {
         else
         {
         */
-            //goto spawn point
-            gameObject.transform.position = spawnPoint;
-            health.value = 100f;
-            damageState = DamageState.STUNNED;
-            stunAge = stunCooldown;
-            RealignHMD();
+        GetComponent<Animator>().SetFloat("health", health.value);
+            //Respawn();
         /*
         }
         */
+    }
+
+    public void Respawn()
+    {
+        //goto spawn point
+        gameObject.transform.position = spawnPoint;
+        health.value = 100f;
+        damageState = DamageState.STUNNED;
+        stunAge = stunCooldown;
+        RealignHMD();
+        GetComponent<Animator>().SetFloat("health", health.value);
     }
 
 
@@ -396,6 +419,8 @@ public class Hero : Damageable {
             }
 
         }
+
+        GetComponent<Animator>().SetFloat("speed", movement.magnitude);
     }
 
     private void rotateCharacter(float theta)
@@ -433,6 +458,8 @@ public class Hero : Damageable {
             
             if (state != HeroState.DASHING && dashAllowed)
             {
+                GetComponent<Animator>().SetBool("dashing", true);
+                GetComponent<Animator>().SetBool("dashing", false);
                 if (onFloor) spawnPoint = gameObject.transform.position;
                 if (lockedObject != null)
                 {
@@ -465,6 +492,8 @@ public class Hero : Damageable {
         {
             if (onFloor)
             {
+                GetComponent<Animator>().SetBool("jumping", true);
+                GetComponent<Animator>().SetBool("dashing", false);
                 gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
                 gameObject.GetComponent<Rigidbody>().useGravity = true;
                 state = HeroState.JUMPING;
@@ -480,7 +509,14 @@ public class Hero : Damageable {
         if (Input.GetButtonDown("X"))
         {
             if (weapon != null)
+            {
+                GetComponent<Animator>().SetBool("shooting", true);
                 weapon.Fire();
+            }
+        }
+        else if (Input.GetButtonUp("X"))
+        {
+            GetComponent<Animator>().SetBool("shooting", false);
         }
     }
 
