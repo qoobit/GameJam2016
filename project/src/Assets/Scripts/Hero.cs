@@ -10,9 +10,19 @@ public class Hero : Damageable {
     public Vector3 hmdForward;
     public Vector3 facing;
     public DamageState damageState = DamageState.HEALTHY;
-    public GameObject cameraRig;
+    public GameObject hmdRig;
     public GameObject Crosshair;
 
+    
+    public GameObject Focal;
+
+
+    public AudioSource JumpAudio;
+    public AudioSource ShotAudio;
+    public AudioSource WalkAudio;
+    public AudioSource DashAudio;
+    public AudioSource DeathAudio;
+    public AudioSource LockAudio;
     public HeroState state = HeroState.IDLE;
 
     float dashDuration = 0.5f;
@@ -32,7 +42,7 @@ public class Hero : Damageable {
     bool lockToTarget;
     
     GameObject lockedObject;
-    GameObject hmdLockedObject;
+    
     
     // Use this for initialization
     void Start () {
@@ -54,17 +64,11 @@ public class Hero : Damageable {
         blasterWeapon.transform.parent = this.transform;
         blasterWeapon.transform.localPosition = new Vector3(blasterWeapon.transform.localPosition.x, blasterWeapon.transform.localPosition.y + 2f, blasterWeapon.transform.localPosition.z);
         weapon = blasterWeapon.GetComponent<Weapon>();
-
-
-
+        
         //initialize hero with GameControl
         health.value = GameControl.control.health;
-
-        
-        
     }
     
-
     void OnTriggerStay(Collider other)
     {
         if (other.gameObject.layer == LayerMask.NameToLayer("Targets"))
@@ -209,13 +213,11 @@ public class Hero : Damageable {
                 gameObject.GetComponent<Rigidbody>().useGravity = true;
                 break;
         }
-
-        applyInputsToCharacter();        
-
-        //Debug Lines
-
-
-
+        if (damageState != DamageState.DEAD)
+        {
+            applyInputsToCharacter();
+        }
+        
         //Oculus look vector
         Debug.DrawLine(Camera.main.transform.position, Camera.main.transform.position + (Camera.main.transform.forward * 100f),Color.red);
 
@@ -232,73 +234,32 @@ public class Hero : Damageable {
     }
     public void RealignHMD()
     {
-        //gameObject.transform.position = spawnPoint;
-        //Debug.Log(gameObject.transform.position+" "+facing+" "+ GameObject.Find("Focal").transform.position);
-        cameraRig.transform.position = gameObject.transform.position - (facing * 10f);
-        cameraRig.transform.position += new Vector3(0, 20f, 0f);
-        cameraRig.transform.LookAt(GameObject.Find("Focal").transform);
+        Vector3 position = gameObject.transform.position - (facing * 7f);
+        position += new Vector3(0, 7f, 0f);
+         
+        hmdRig.GetComponent<QoobitOVR>().Realign(position,Focal.transform);
     }
-    Vector3 HighlightTarget()
+    void HighlightTarget()
     {
-        if (GameControl.control.level == null) return Vector3.zero;
-        RaycastHit hit;
-        Material whiteMat = Resources.Load("Materials/White", typeof(Material)) as Material;
-        Material greenMat = Resources.Load("Materials/Green", typeof(Material)) as Material;
         Vector3 directionToTarget = Vector3.zero;
 
-        hmdLockedObject = null;
-        //reset materials to white
-
-        GameObject[] targets = GameObject.FindGameObjectsWithTag("Target");
-
-
-        for (int i = 0; i < targets.Length; i++)
-        {
-            
-
-            if (targets[i].GetComponent<MeshRenderer>() != null)
-            {
-                targets[i].GetComponent<MeshRenderer>().material = whiteMat;
-            }
-            SetSkinnedMeshRendererColor(targets[i], new Color(1f, 1f, 1f,1f));
-                
-        }
-
-        //highlight
         LayerMask layerMask = new LayerMask();
         layerMask = (1 << LayerMask.NameToLayer("Targets"));
         layerMask |= (1 << LayerMask.NameToLayer("Enemy"));
 
         Crosshair.SetActive(false);
-        //Debug.Log(Camera.main.gameObject.transform.GetChild(0).gameObject.name);
-        Camera.main.gameObject.transform.GetChild(0).gameObject.SetActive(false);
 
-
-        if (Physics.SphereCast(Camera.main.transform.position, 5f, Camera.main.transform.forward, out hit, Mathf.Infinity, layerMask ))
+        if (hmdRig.GetComponent<QoobitOVR>().Discovered())
         {
-            if (hit.collider.gameObject.GetComponent<MeshRenderer>() != null)
-            {
-                hit.collider.gameObject.GetComponent<MeshRenderer>().material = greenMat;
-            }
-
-            SetSkinnedMeshRendererColor(hit.collider.gameObject, new Color(0, 255f/255f, 86f/255f,0f));
+            LockAudio.Play();
+        }
+        if (lockToTarget && hmdRig.GetComponent<QoobitOVR>().FocusObject != null)
+        {
             
-            Camera.main.gameObject.transform.GetChild(0).gameObject.SetActive(true);
-            hmdLockedObject = hit.collider.gameObject;
-
-            Vector3 targetCenter = hmdLockedObject.transform.TransformPoint(gameObject.GetComponent<CapsuleCollider>().center);
-            Vector3 directionToCenter = targetCenter - Camera.main.transform.position;
-            directionToCenter.Normalize();
-            Camera.main.gameObject.transform.GetChild(0).gameObject.transform.position = targetCenter - (directionToCenter * 3f);
-
-            if (lockToTarget&&lockedObject==null)
-            {
-                lockedObject = hmdLockedObject;
-            }
+            lockedObject = hmdRig.GetComponent<QoobitOVR>().FocusObject;
             
         }
-
-
+        
         if (lockedObject != null)
         {
             Crosshair.SetActive(true);
@@ -319,8 +280,6 @@ public class Hero : Damageable {
             directionToCenter.Normalize();
             Crosshair.transform.position = targetCenter - (directionToCenter * 3f);
         }
-
-        return directionToTarget;
     }
 
     override public void Hurt(float damage, GameObject attacker)
@@ -333,7 +292,9 @@ public class Hero : Damageable {
         health.value -= damage;
         if (health.value <= 0)
         {
+            
             this.Die();
+
         }
         else
         {
@@ -344,6 +305,9 @@ public class Hero : Damageable {
 
     override public void Die()
     {
+        if (damageState == DamageState.DEAD) return;
+
+        DeathAudio.Play();
         damageState = DamageState.DEAD;
         GameControl.control.lives--;
         /*
@@ -384,9 +348,9 @@ public class Hero : Damageable {
         rotateCharacter(theta);
 
         //highlight object being looked at
-        Vector3 directionToTarget = HighlightTarget();
-
-        doCharacterDash(directionToTarget);
+        HighlightTarget();
+        
+        doCharacterDash();
         doCharacterJump();
         doCharacterFire();
         doRealignHMD();
@@ -395,6 +359,7 @@ public class Hero : Damageable {
 
     private void moveCharacter(float theta)
     {
+
         //controller movement
         Vector3 movement = new Vector3(-Input.GetAxisRaw("LeftJoystickX"), 0, Input.GetAxisRaw("LeftJoystickY"));
         Vector3 movementUnit = movement.normalized;
@@ -402,10 +367,15 @@ public class Hero : Damageable {
 
         if (movement.magnitude != 0f)
         {
+
             movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
             gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
-
-            if(state!=HeroState.DASHING) state = HeroState.WALKING;
+            WalkAudio.Play();
+            if (state != HeroState.DASHING)
+            {
+                
+                state = HeroState.WALKING;
+            }
             if (lockedObject == null)
             {
                 facing = movementUnit;
@@ -451,7 +421,7 @@ public class Hero : Damageable {
         UpdateTransform();
     }
 
-    private void doCharacterDash(Vector3 directionToTarget)
+    private void doCharacterDash()
     {
         if (Input.GetButtonDown("B"))
         {
@@ -459,13 +429,15 @@ public class Hero : Damageable {
             if (state != HeroState.DASHING && dashAllowed)
             {
                 GetComponent<Animator>().SetBool("dashing", true);
-                GetComponent<Animator>().SetBool("dashing", false);
+                DashAudio.Play();
+
                 if (onFloor) spawnPoint = gameObject.transform.position;
                 if (lockedObject != null)
                 {
-                    directionToTarget = lockedObject.transform.position - gameObject.transform.position;
+                    Vector3 directionToTarget = lockedObject.transform.position - gameObject.transform.position;
                     directionToTarget.Normalize();
-                    gameObject.GetComponent<Rigidbody>().AddForce(directionToTarget * 20000f);
+                    gameObject.GetComponent<Rigidbody>().AddForce(directionToTarget * 10000f);
+
                     gameObject.GetComponent<Rigidbody>().useGravity = false;
                     state = HeroState.DASHING;
                     dashAge = 0f;
@@ -473,6 +445,7 @@ public class Hero : Damageable {
                     dashAllowed = false;
                 }
                 else {
+                    
                     facing.Normalize();
                     gameObject.GetComponent<Rigidbody>().AddForce(facing * 10000f);
                     gameObject.GetComponent<Rigidbody>().useGravity = false;
@@ -494,6 +467,7 @@ public class Hero : Damageable {
             {
                 GetComponent<Animator>().SetBool("jumping", true);
                 GetComponent<Animator>().SetBool("dashing", false);
+                JumpAudio.Play();
                 gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
                 gameObject.GetComponent<Rigidbody>().useGravity = true;
                 state = HeroState.JUMPING;
@@ -511,6 +485,7 @@ public class Hero : Damageable {
             if (weapon != null)
             {
                 GetComponent<Animator>().SetBool("shooting", true);
+                ShotAudio.Play();
                 weapon.Fire();
             }
         }
