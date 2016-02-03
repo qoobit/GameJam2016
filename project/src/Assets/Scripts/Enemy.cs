@@ -54,7 +54,7 @@ public class Enemy : Damageable
         
         if (guage.value <= 0f)
         {
-            if (attacker.name == "Hero" && (attacker.GetComponent<Hero>().state == HeroState.DASHING|| attacker.GetComponent<Hero>().state == HeroState.AIR_DASHING))
+            if (attacker.name == "Hero" && (attacker.GetComponent<Hero>().IsDashing()))
             {
                 Explode();
             }

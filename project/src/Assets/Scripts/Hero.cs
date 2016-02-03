@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public enum HeroState { IDLE, WALKING, JUMPING, DASHING, AIR_DASHING, SHOOTING };
+//public enum HeroState { IDLE, WALKING, JUMPING, DASHING, SHOOTING };
 public enum DamageState { HEALTHY, STUNNED, DEAD };
 
 public class Hero : Damageable {
@@ -13,9 +13,16 @@ public class Hero : Damageable {
     public GameObject hmdRig;
     public GameObject Crosshair;
 
+    Animator animator;
+
+    bool dashing;
+    bool jumping;
+    bool shooting;
+    bool charging;
+   
+    int jumpDash;
     
     public GameObject Focal;
-
 
     public AudioSource JumpAudio;
     public AudioSource ShotAudio;
@@ -23,29 +30,49 @@ public class Hero : Damageable {
     public AudioSource DashAudio;
     public AudioSource DeathAudio;
     public AudioSource LockAudio;
-    public HeroState state = HeroState.IDLE;
 
+
+    float walkAge = 0f;
+    float walkDuration = 0.3f;
+    float dashForce;
     float dashDuration = 0.5f;
     float dashAge = 0f;
-    public bool dashAllowed;
+    bool dashAllowed;
+    bool airDashAllowed;
+    bool jumpAllowed;
     float stunCooldown = 2f;
     float stunAge = 0f;
+    int jumpHold = 0;
+    int jumpLimit = 3;
+    float jumpForce;
+    
     
     Vector3 spawnPoint;
     
     float speed;
-    bool onFloor;
+//    bool onFloor;
 
     Guage health;
     public Weapon weapon;
 
     bool lockToTarget;
-    
+    bool firstLock;
+
     GameObject lockedObject;
     
-    
+    public bool IsDashing(){return dashing;}
+    public bool IsShooting() { return shooting; }
+    public bool IsJumping() { return jumping; }
+    public bool IsCharging() { return charging; }
+
     // Use this for initialization
     void Start () {
+        jumpDash = 0;
+        dashForce = 10000f;
+        jumpForce = 12500f;
+
+        dashing = charging = jumping = shooting = false;
+        jumpHold = 0;
         lockToTarget = false;
         
         speed = 0.2f;
@@ -53,9 +80,9 @@ public class Hero : Damageable {
         //hp
         health = new Guage();
         spawnPoint = gameObject.transform.position;
-
-        dashAllowed = false;
-
+        animator = GetComponent<Animator>();
+        jumpAllowed = dashAllowed = false;
+        firstLock = false;
         Physics.gravity = new Vector3(0, -50, 0);
         
         //Load a blaster as our weapon
@@ -73,7 +100,7 @@ public class Hero : Damageable {
     {
         if (other.gameObject.layer == LayerMask.NameToLayer("Targets"))
         {
-            if (state == HeroState.DASHING)
+            if(dashing)
             {
                 //crash attack
                 other.gameObject.GetComponent<Enemy>().Explode();
@@ -82,7 +109,7 @@ public class Hero : Damageable {
         }
         if ( other.gameObject.layer == LayerMask.NameToLayer("Enemy"))
         {
-            if (state == HeroState.DASHING)
+            if(dashing)
             {
                 //crash attack
                 other.gameObject.GetComponent<Damageable>().Hurt(100f, this.gameObject);
@@ -101,11 +128,15 @@ public class Hero : Damageable {
         if (GameControl.control.level != null) {
             if (col.gameObject.tag == "Platform")
             {
-                state = HeroState.IDLE;
-                onFloor = true;
+                //landed
+                jumping = false;
+                jumpDash = 0;
+                jumpHold = 0;
+                airDashAllowed = true;
                 dashAllowed = true;
+                jumpAllowed = true;
                 GetComponent<Animator>().SetBool("jumping", false);
-                GetComponent<Animator>().SetBool("dashing", false);
+                
             }
 
         }
@@ -158,10 +189,18 @@ public class Hero : Damageable {
         }
     }
 
+    void UpdateAnimator()
+    {
+        animator.SetBool("dashing", dashing);
+        animator.SetBool("jumping", jumping);
+        animator.SetBool("shooting", shooting);
+        animator.SetFloat("health", health.value);
+    }
+
     // Update is called once per frame
     void Update() {
         //Debug.Log(GameObject.Find("Focal").transform.localPosition+" "+ GameObject.Find("Focal").transform.position);
-        //Debug.Log(dashAllowed + " " + state + " " + onFloor);
+        
         ((Blaster)weapon).bulletReloadTime = 0.01f;
         ((Blaster)weapon).clipReloadTime = 0f;
         weapon.weaponFireMode = (int)BlasterMode.STRAIGHT;
@@ -193,30 +232,27 @@ public class Hero : Damageable {
         }
 
 
-        switch (state)
+        if (dashing)
         {
-            case HeroState.DASHING:
-
-                dashAge += Time.deltaTime;
-                if (dashAge >= dashDuration)
-                {
-                    //state = HeroState.JUMPING;
-                    state = HeroState.IDLE;
-                    gameObject.GetComponent<Rigidbody>().isKinematic = true;
-                    gameObject.GetComponent<Rigidbody>().useGravity = true;
-                    dashAllowed = true;
-                    GetComponent<Animator>().SetBool("dashing", false);
-                }
-                break;
-            
-            default:
-                gameObject.GetComponent<Rigidbody>().useGravity = true;
-                break;
+            dashAge += Time.deltaTime;
+            if (dashAge >= dashDuration)
+            {
+                stopDash();
+                dashAllowed = true;
+            }
         }
+        else
+        {
+            gameObject.GetComponent<Rigidbody>().useGravity = true;
+        }
+
+       
         if (damageState != DamageState.DEAD)
         {
             applyInputsToCharacter();
         }
+
+        UpdateAnimator();
         
         //Oculus look vector
         Debug.DrawLine(Camera.main.transform.position, Camera.main.transform.position + (Camera.main.transform.forward * 100f),Color.red);
@@ -226,11 +262,11 @@ public class Hero : Damageable {
     }
     public void UpdateTransform()
     {
-        facing.Normalize();
+        
         float facingAngle = Vector3.Angle(Vector3.forward, facing);
         facingAngle *= Mathf.Sign(Vector3.Cross(Vector3.forward, facing).y);
-        //Debug.Log(Vector3.forward + " " + direction + " " + "ANGLE:" + lookAngle);
-        gameObject.transform.localEulerAngles = new Vector3(0, facingAngle, 0);
+
+        transform.localEulerAngles = new Vector3(0, facingAngle, 0);
     }
     public void RealignHMD()
     {
@@ -239,7 +275,7 @@ public class Hero : Damageable {
          
         hmdRig.GetComponent<QoobitOVR>().Realign(position,Focal.transform);
     }
-    void HighlightTarget()
+    void FocusTarget()
     {
         Vector3 directionToTarget = Vector3.zero;
 
@@ -251,21 +287,26 @@ public class Hero : Damageable {
 
         if (hmdRig.GetComponent<QoobitOVR>().Discovered())
         {
-            LockAudio.Play();
+            
         }
+
         if (lockToTarget && hmdRig.GetComponent<QoobitOVR>().FocusObject != null)
         {
-            
             lockedObject = hmdRig.GetComponent<QoobitOVR>().FocusObject;
-            
+            if (!firstLock)
+            {
+                LockAudio.Play();
+                firstLock = true;
+            }
         }
         
         if (lockedObject != null)
         {
+
             Crosshair.SetActive(true);
 
             //face target
-            directionToTarget = lockedObject.transform.position - gameObject.transform.position;
+            directionToTarget = lockedObject.transform.position - transform.position;
             directionToTarget.Normalize();
             facing = directionToTarget;
             float angleToTarget = Vector3.Angle(Vector3.forward, directionToTarget);
@@ -286,15 +327,13 @@ public class Hero : Damageable {
     {
         //Don't take damage if we are stunned
         if (stunAge > 0f) return;
-
-        if ((state == HeroState.DASHING || state == HeroState.AIR_DASHING) && attacker.layer == LayerMask.NameToLayer("Enemy")) return;
+    
+        if (dashing && attacker.layer == LayerMask.NameToLayer("Enemy")) return;
 
         health.value -= damage;
         if (health.value <= 0)
         {
-            
             this.Die();
-
         }
         else
         {
@@ -319,7 +358,7 @@ public class Hero : Damageable {
         else
         {
         */
-        GetComponent<Animator>().SetFloat("health", health.value);
+        
             //Respawn();
         /*
         }
@@ -334,7 +373,7 @@ public class Hero : Damageable {
         damageState = DamageState.STUNNED;
         stunAge = stunCooldown;
         RealignHMD();
-        GetComponent<Animator>().SetFloat("health", health.value);
+        
     }
 
 
@@ -348,7 +387,7 @@ public class Hero : Damageable {
         rotateCharacter(theta);
 
         //highlight object being looked at
-        HighlightTarget();
+        FocusTarget();
         
         doCharacterDash();
         doCharacterJump();
@@ -367,15 +406,24 @@ public class Hero : Damageable {
 
         if (movement.magnitude != 0f)
         {
-
+            
             movementUnit = Quaternion.Euler(0, theta, 0) * movementUnit;
             gameObject.transform.position += movementUnit * speed * Mathf.Abs(movement.magnitude);
-            WalkAudio.Play();
-            if (state != HeroState.DASHING)
+            
+            if (walkAge <= 0f)
             {
-                
-                state = HeroState.WALKING;
+                WalkAudio.Play();
             }
+            walkAge += Time.deltaTime;
+            
+            float magnitude = movement.magnitude;
+            if (magnitude > 1f) magnitude = 1f;
+            walkDuration = (1f/magnitude) * 0.3f;
+            if (walkAge >= walkDuration)
+            {
+                walkAge = 0f;
+            }
+
             if (lockedObject == null)
             {
                 facing = movementUnit;
@@ -383,13 +431,9 @@ public class Hero : Damageable {
         }
         else
         {
-            if (state == HeroState.WALKING)
-            {
-                state = HeroState.IDLE;
-            }
-
+            WalkAudio.Stop();
         }
-
+        
         GetComponent<Animator>().SetFloat("speed", movement.magnitude);
     }
 
@@ -405,16 +449,13 @@ public class Hero : Damageable {
             facing = Quaternion.Euler(0, theta, 0) * directionUnit;
             if (lockedObject==null)
             {
-                facing = direction;
-                //facing = direction;
-                
+                facing = direction;               
             }
             else
             {
                 Vector3 directionToTarget = lockedObject.transform.position - gameObject.transform.position;
                 directionToTarget.Normalize();
                 facing = directionToTarget;
-                
             }
         }
 
@@ -423,58 +464,85 @@ public class Hero : Damageable {
 
     private void doCharacterDash()
     {
+
         if (Input.GetButtonDown("B"))
         {
-            
-            if (state != HeroState.DASHING && dashAllowed)
+
+            if (!dashing && dashAllowed && jumpDash==0)
             {
-                GetComponent<Animator>().SetBool("dashing", true);
+                dashing = true;
                 DashAudio.Play();
 
-                if (onFloor) spawnPoint = gameObject.transform.position;
+                if (!jumping) spawnPoint = gameObject.transform.position;
+                else {
+                    jumpDash++;
+                    
+                }
+
+                dashAge = 0f;
+                dashAllowed = false;
+                
+                Vector3 dashDirection = Vector3.zero;
                 if (lockedObject != null)
                 {
+                    //move towards locked object
                     Vector3 directionToTarget = lockedObject.transform.position - gameObject.transform.position;
                     directionToTarget.Normalize();
-                    gameObject.GetComponent<Rigidbody>().AddForce(directionToTarget * 10000f);
-
-                    gameObject.GetComponent<Rigidbody>().useGravity = false;
-                    state = HeroState.DASHING;
-                    dashAge = 0f;
-                    //onFloor = false;
-                    dashAllowed = false;
+                    dashDirection = directionToTarget;
+                    
                 }
                 else {
-                    
+                    //move towards facing direction
                     facing.Normalize();
-                    gameObject.GetComponent<Rigidbody>().AddForce(facing * 10000f);
-                    gameObject.GetComponent<Rigidbody>().useGravity = false;
-                    state = HeroState.DASHING;
-                    dashAge = 0f;
-                    //onFloor = false;
-
-                    dashAllowed = false;
+                    dashDirection = facing;
                 }
+
+                GetComponent<Rigidbody>().AddForce(dashDirection * dashForce);
+                GetComponent<Rigidbody>().useGravity = false;
             }
+        }
+        if (Input.GetButtonUp("B"))
+        {
+            if(jumpDash!=1||(jumpDash == 1 && airDashAllowed))
+            {
+                stopDash();
+                airDashAllowed = false;
+            }
+            
         }
     }
 
+    private void stopDash()
+    {
+        dashing = false;
+        GetComponent<Rigidbody>().isKinematic = true;
+        GetComponent<Rigidbody>().useGravity = true;
+        
+    }
+
+    private void stopJump()
+    {
+        jumping = false;
+        GetComponent<Rigidbody>().isKinematic = true;
+        
+    }
     private void doCharacterJump()
     {
         if (Input.GetButtonDown("A"))
         {
-            if (onFloor)
+            if(!jumping&&jumpAllowed)
             {
-                GetComponent<Animator>().SetBool("jumping", true);
-                GetComponent<Animator>().SetBool("dashing", false);
                 JumpAudio.Play();
-                gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * 10000f);
+                gameObject.GetComponent<Rigidbody>().AddForce(Vector3.up * jumpForce);
                 gameObject.GetComponent<Rigidbody>().useGravity = true;
-                state = HeroState.JUMPING;
-                onFloor = false;
+                jumping = true;
+                jumpAllowed = false;
                 spawnPoint = gameObject.transform.position;
-
             }
+        }
+        if (Input.GetButtonUp("A"))
+        {
+            if(jumping) stopJump();
         }
     }
 
@@ -484,14 +552,14 @@ public class Hero : Damageable {
         {
             if (weapon != null)
             {
-                GetComponent<Animator>().SetBool("shooting", true);
+                shooting = true;
                 ShotAudio.Play();
                 weapon.Fire();
             }
         }
         else if (Input.GetButtonUp("X"))
         {
-            GetComponent<Animator>().SetBool("shooting", false);
+            shooting = false;
         }
     }
 
@@ -515,6 +583,7 @@ public class Hero : Damageable {
         {
             lockToTarget = false;
             lockedObject = null;
+            firstLock = false;
         }
     }
 }
