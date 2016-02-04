@@ -8,17 +8,21 @@ public class BossTurret : Enemy
     private EnemyBase enemyBase;
     private Animator animator;
 
-    private NavMeshAgent bossAgent;
+    private NavMeshAgent navMeshAgent;
+    private Rigidbody rigidBody;
 
     //For Animation States
     private bool isAttacking;
 
     //Attack variables
-    float dashAttackChargeStart = -1f;
-    float dashAttackChargingStart = -1f;
-    float dashAttackChargeDuration = 2.0f;
-    float dashAttackChargingDuration = 0.75f;
-    float dashAttackSpeed = 50.0f;
+    private float dashAttackChargeStart = -1f;
+    private float dashAttackChargingStart = -1f;
+    private float dashAttackChargeDuration = 2.0f;
+    private float dashAttackChargingDuration = 0.75f;
+    private float dashAttackSpeed = 50.0f;
+    private Vector3 dashTargetPosition;
+    private float dashTargetRemaining;
+    private bool dashTargetLocked;
 
 
 
@@ -41,7 +45,8 @@ public class BossTurret : Enemy
         weapon = blasterWeapon.GetComponent<Weapon>();
         weapon.weaponFireMode = 0;
 
-        bossAgent = GetComponent<NavMeshAgent>();
+        navMeshAgent = GetComponent<NavMeshAgent>();
+        rigidBody = GetComponent<Rigidbody>();
     }
 
     // Update is called once per frame
@@ -52,7 +57,17 @@ public class BossTurret : Enemy
         {
             if (head.currentState == EnemyHeadState.LOCKED)
             {
-                dashAttack();
+                int rand = Random.Range(0, 1);
+                switch (rand)
+                {
+                    case 0:
+                        dashAttack();
+                        break;
+                    case 1:
+                        dashAttack();
+                        //jumpAttack();
+                        break;
+                }
             }
             else
             {
@@ -74,31 +89,66 @@ public class BossTurret : Enemy
             if (dashAttackChargingStart < 0)
             {
                 dashAttackChargingStart = Time.time;
+                dashTargetLocked = false;
             }
             else if (Time.time < dashAttackChargingStart + dashAttackChargingDuration)
             {
-                //Do charging attack
-                bossAgent.enabled = false;
-                Vector3 forwardNoY = new Vector3(this.transform.forward.x, 0f, this.transform.forward.z);
-                this.transform.position += forwardNoY.normalized * dashAttackSpeed * Time.deltaTime;
-                isAttacking = false;
+                float currentDashTargetRemaining;
+
+                //Do dash attack
+                if (!dashTargetLocked)
+                {
+                    dashTargetPosition = head.lookAtTarget.position;
+                    dashTargetRemaining = float.MaxValue;
+                    dashTargetLocked = true;
+                }
+
+                currentDashTargetRemaining = (dashTargetPosition - this.transform.position).magnitude;
+                if (currentDashTargetRemaining > dashTargetRemaining)
+                    dashAttackFinish();
+                else
+                {
+                    navMeshAgent.enabled = false;
+                    Vector3 forwardNoY = new Vector3(this.transform.forward.x, 0f, this.transform.forward.z);
+                    rigidBody.velocity = forwardNoY.normalized * dashAttackSpeed;
+                    isAttacking = false; //Just for animation
+                    dashTargetRemaining = currentDashTargetRemaining;
+                }
             }
             else
             {
-                //Finished Charging Attack
-                enemyBase.CurrentState = EnemyBaseState.PATROL;
-                bossAgent.enabled = true;
-                isAttacking = false;
-                dashAttackChargeStart = -1f;
-                dashAttackChargingStart = -1f;
+                dashAttackFinish();
             }
         }
         else
         {
             //Do Charging up
-            isAttacking = true;
+            isAttacking = true; //Just for animation
+            rigidBody.velocity = Vector3.zero;
         }
+    }
 
+    private void dashAttackFinish()
+    {
+        enemyBase.CurrentState = EnemyBaseState.PATROL;
+        rigidBody.velocity = Vector3.zero;
+        navMeshAgent.enabled = true;
+        isAttacking = false;
+        dashAttackChargeStart = -1f;
+        dashAttackChargingStart = -1f;
+    }
+
+    private void jumpAttack()
+    {
+        
+    }
+
+    private void jumpAttackFinish()
+    {
+        enemyBase.CurrentState = EnemyBaseState.PATROL;
+        rigidBody.velocity = Vector3.zero;
+        navMeshAgent.enabled = true;
+        isAttacking = false;
     }
 
     private void fireWeapon()
