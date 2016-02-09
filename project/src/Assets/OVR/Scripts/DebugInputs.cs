@@ -3,8 +3,6 @@ using System.Collections;
 
 public class DebugInputs : MonoBehaviour
 {
-    private Vector3 mouseOrigin;
-    private bool mouseOriginValid = false;
     private float moveSpeedDefault = 5.0f;
     private float moveSpeedMultiplier = 10.0f;
     private float rotateSpeed = 20.0f;

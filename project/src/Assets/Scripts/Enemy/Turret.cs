@@ -1,27 +1,28 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Turret : Enemy
 {
     private EnemyHead head;
     private Transform body;
-    private EnemyBase enemyBase;
+    private EnemyWalk enemyWalk;
     private Animator animator;
 
     //For Animation States
     private bool isAttacking;
 
     // Use this for initialization
-    void Start()
+    protected override void Start()
     {
         base.Start();
         head = GetComponent<EnemyHead>();
         body = this.transform.FindChild("Body");
-        enemyBase = GetComponent<EnemyBase>();
+        enemyWalk = GetComponent<EnemyWalk>();
         animator = GetComponent<Animator>();
 
         if (head == null) throw new System.Exception("Unable to find Head");
-        if (enemyBase == null) throw new System.Exception("Unable to find Body");
+        if (enemyWalk == null) throw new System.Exception("Unable to find Enemy Walk");
 
         //Load a blaster as our weapon
         Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
@@ -29,24 +30,33 @@ public class Turret : Enemy
         blasterWeapon.transform.parent = body;
         weapon = blasterWeapon.GetComponent<Weapon>();
         weapon.weaponFireMode = 0;
+
+        //Set our head to search
+        List<GameObject> heroList = GameControl.control.level.GetHeroList();
+        head.SearchForTargets(heroList);
+
+        //Set our inital walk state
+        enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
     }
 
     // Update is called once per frame
-    void Update ()
+    protected override void Update ()
     {
         base.Update();
-        if (enemyBase.CurrentState == EnemyBaseState.OFFENSE)
+
+        isAttacking = false;
+
+        if (head.state == EnemyHead.State.LOCKED)
         {
-            if (head.currentState == EnemyHeadState.LOCKED)
-            {
-                isAttacking = true;
-                attack();
-            }
-            else
-            {
-                isAttacking = false;
-            }
+            enemyWalk.lookAtTarget = head.lookAtTarget;
+            enemyWalk.state = EnemyWalk.State.FOLLOW_TARGET;
+            isAttacking = true;
+            attack();
         }
+        else if (head.state == EnemyHead.State.SEARCHING)
+        {
+            enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
+        }        
 
         updateAnimationStates();
     }
@@ -61,7 +71,7 @@ public class Turret : Enemy
     private void updateAnimationStates()
     {
         animator.SetBool("attacking", isAttacking);
-        animator.SetFloat("speed", enemyBase.GetVelocity().magnitude);
+        animator.SetFloat("speed", enemyWalk.GetVelocity().magnitude);
         animator.SetFloat("hp", this.hp);
     }
 

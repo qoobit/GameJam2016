@@ -2,20 +2,20 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class ArenaLevel : MonoBehaviour
+public class ArenaLevel : Level
 {
-    private enum ArenaState { WARMUP, SPAWNBOSS, BOSSFIGHT, BOSSDEFEATED }
+    private enum State { WARMUP, SPAWNBOSS, BOSSFIGHT, BOSSDEFEATED }
 
-    private ArenaState arenaState;
+    private State state;
     private List<GameObject> turretList;
     private GameObject boss;
     private GameObject portalEntry;
     private GameObject portalExit;
 
     // Use this for initialization
-    void Start()
+    override protected void Start()
     {
-        
+        base.Start();
 
         //Get all existing turrets in scene and save to turretList
         turretList = new List<GameObject>();
@@ -26,34 +26,32 @@ public class ArenaLevel : MonoBehaviour
         }
 
         boss = null; //No boss yet
-        arenaState = ArenaState.WARMUP; //Set arena state to WARMUP
+        state = State.WARMUP; //Set arena state to WARMUP
 
         //Get the exit portal and disable it for now
         portalEntry = GameObject.Find("Portal Entry");
         portalExit = GameObject.Find("Portal Exit");
         portalExit.SetActive(false);
     }
-	
-	// Update is called once per frame
-	void Update ()
-    {
-        GameControl.control.level = this.gameObject;
 
-        switch (arenaState)
+    // Update is called once per frame
+    override protected void Update()
+    {
+        switch (state)
         {
-            case ArenaState.WARMUP:
+            case State.WARMUP:
                 updateWarmupState();
                 break;
 
-            case ArenaState.SPAWNBOSS:
+            case State.SPAWNBOSS:
                 updateSpawnBossState();
                 break;
 
-            case ArenaState.BOSSFIGHT:
+            case State.BOSSFIGHT:
                 updateBossFightState();
                 break;
 
-            case ArenaState.BOSSDEFEATED:
+            case State.BOSSDEFEATED:
                 updateBossDefeatedState();
                 break;
         }
@@ -72,28 +70,24 @@ public class ArenaLevel : MonoBehaviour
         turretList = newTurretList;
 
         if (turretList.Count == 0)
-            arenaState = ArenaState.SPAWNBOSS;
+            state = State.SPAWNBOSS;
     }
 
     private void updateSpawnBossState()
     {
+        //Spawn the boss
         if (boss == null)
             spawnBoss();
-        else if (boss.transform.position.y <= 0.75f)
-        {
-            //Check if boss has reached the ground (falling from sky)
-            //Enable the navmesh and begin patrolling.
-            NavMeshAgent bossAgent = boss.GetComponent<NavMeshAgent>();
-            bossAgent.enabled = true;
-
-            arenaState = ArenaState.BOSSFIGHT;
-        }
+        
+        //Check if we spawned correctly
+        if (boss != null)
+            state = State.BOSSFIGHT;
     }
 
     private void updateBossFightState()
     {
-        if (boss==null||boss.GetComponent<BossTurret>().isAlive() == false)
-            arenaState = ArenaState.BOSSDEFEATED;
+        if (boss == null || boss.GetComponent<BossTurret>().isAlive() == false)
+            state = State.BOSSDEFEATED;
     }
 
     private void updateBossDefeatedState()
@@ -125,9 +119,9 @@ public class ArenaLevel : MonoBehaviour
         bossTurret.transform.position = bossSpawn.transform.position; //Move boss to bossSpawn after navMeshAgent is created
         bossTurret.transform.rotation = bossSpawn.transform.rotation;
 
-        EnemyBase bossEnemyBase = bossTurret.GetComponent<EnemyBase>();
+        EnemyWalk bossEnemyWalk = bossTurret.GetComponent<EnemyWalk>();
         GameObject waypointCollection = GameObject.Find("Waypoints");
-        bossEnemyBase.WaypointCollection = waypointCollection;
+        bossEnemyWalk.waypointCollection = waypointCollection;
 
         boss = bossTurret;
     }

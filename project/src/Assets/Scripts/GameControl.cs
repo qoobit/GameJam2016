@@ -13,7 +13,7 @@ public class GameControl : MonoBehaviour {
     public bool dash;
     public bool shoot;
     public static GameControl control;
-    public GameObject level;
+    public Level level;
 
     private bool enableMultiDisplay = false;
     private int multiDisplayCount = 1;
@@ -33,9 +33,9 @@ public class GameControl : MonoBehaviour {
 
         activateMultiDisplays();
     }
+
 	void Start () {
         //init
-        level = null;
         sceneName = portalName = "";
         lives = 3;
         health = 100f;

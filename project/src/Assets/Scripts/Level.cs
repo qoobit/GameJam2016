@@ -2,25 +2,21 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class Level : MonoBehaviour
+abstract public class Level : MonoBehaviour
 {
-
     public GameObject CanvasCamera;
     public GameObject Hero;
-
     
     public List<GameObject> bullets = new List<GameObject>();
-    
     public List<GameObject> portals = new List<GameObject>();
+    public List<GameObject> heroList = new List<GameObject>();
 
-    
-
-    // Use this for initialization
-    void Start()
+    protected virtual void Start()
     {
+        GameControl.control.level = this;
+
         if (GameControl.control.portalName != "")
         {
-            
             GameObject portal = GameObject.Find(GameControl.control.portalName);
             if (portal != null)
             {
@@ -30,13 +26,18 @@ public class Level : MonoBehaviour
                 Hero.GetComponent<Hero>().RealignHMD();
             }
         }
-        
+
+        heroList.Add(Hero);
         CanvasCamera.SetActive(true);
     }
 
-    // Update is called once per frame
-    void Update()
+    protected virtual void Update()
     {
 
+    }
+
+    public List<GameObject> GetHeroList()
+    {
+        return this.heroList;
     }
 }

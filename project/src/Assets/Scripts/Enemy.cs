@@ -10,6 +10,10 @@ public class Enemy : Damageable
     protected Object explosionObject;
     protected Weapon weapon;
 
+    public int currentState = 0;
+    public int nextState = 0;
+    public float nextStateTime = float.MaxValue;
+
     
     protected virtual void Start ()
     {
@@ -20,9 +24,26 @@ public class Enemy : Damageable
 
     protected virtual void Update () {
         hp = guage.value;
+
+        if (Time.time >= nextStateTime)
+            currentState = nextState;
 	}
 
+    protected void setCurrentState(int state)
+    {
+        currentState = state;
+        nextState = state;
+        nextStateTime = float.MaxValue;
+    }
 
+    protected void setNextState(int state, float delay, bool forceUpdate = false)
+    {
+        if (nextState != state || forceUpdate)
+        {
+            nextState = state;
+            nextStateTime = Time.time + delay;
+        }
+    }
 
     void OnCollisionEnter(Collision collision)
     {
@@ -32,6 +53,7 @@ public class Enemy : Damageable
         if (damageable != null)
             damageable.Hurt(baseDamage, this.gameObject);
     }
+
     void OnTriggerStay(Collider other)
     {
         if (baseDamage == 0) return;
@@ -43,8 +65,7 @@ public class Enemy : Damageable
 
     public void Explode()
     {
-        GameObject explosion = Instantiate(explosionObject, gameObject.transform.position, Quaternion.identity) as GameObject;
-
+        Instantiate(explosionObject, gameObject.transform.position, Quaternion.identity);
         Destroy(this.gameObject);
     }
 
@@ -62,14 +83,16 @@ public class Enemy : Damageable
             {
                 Die();
             }
-            
         }
     }
 
     override public void Die()
     {
         baseDamage = 0f;
-        if(GetComponent<EnemyBase>()!=null) GetComponent<EnemyBase>().CurrentState = EnemyBaseState.IDLE;
+        if (GetComponent<EnemyWalk>() != null) GetComponent<EnemyWalk>().enabled = false;
+        if (GetComponent<EnemyHead>() != null) GetComponent<EnemyHead>().enabled = false;
+        if (GetComponent<CapsuleCollider>() != null) GetComponent<CapsuleCollider>().enabled = false;
+        if (GetComponent<NavMeshAgent>() != null) GetComponent<NavMeshAgent>().enabled = false;
         StartCoroutine(WaitAndExplode(0.5f));
     }
 

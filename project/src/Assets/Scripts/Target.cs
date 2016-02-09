@@ -12,12 +12,12 @@ public class Target : MonoBehaviour {
 	void Update () {
 	    
 	}
+
     void OnTriggerEnter(Collider other)
     {
-        
         if (other.name == "Projectile")
         {
-            GameObject explosion = Instantiate(explosionObject, gameObject.transform.position, Quaternion.identity) as GameObject;
+            Instantiate(explosionObject, gameObject.transform.position, Quaternion.identity);
             Destroy(other.gameObject);
             Destroy(this.gameObject);
         }
