@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Enemy : Damageable
+public class Enemy : MonoBehaviour, IDamageable, ISpawnable
 {
     public float hp = 100f;
     public float baseDamage = 0f;
+    public Spawnable.Type spawnType { get; set; }
 
     public Guage guage;
     protected Object explosionObject;
@@ -49,7 +50,7 @@ public class Enemy : Damageable
     {
         if (baseDamage == 0) return;
 
-        Damageable damageable = collision.gameObject.GetComponent<Damageable>();
+        IDamageable damageable = collision.gameObject.GetComponent<IDamageable>();
         if (damageable != null)
             damageable.Hurt(baseDamage, this.gameObject);
     }
@@ -58,7 +59,7 @@ public class Enemy : Damageable
     {
         if (baseDamage == 0) return;
         
-        Damageable damageable = other.gameObject.GetComponent<Damageable>();
+        IDamageable damageable = other.gameObject.GetComponent<IDamageable>();
         if (damageable != null)
             damageable.Hurt(baseDamage, this.gameObject);
     }
@@ -66,10 +67,10 @@ public class Enemy : Damageable
     public void Explode()
     {
         Instantiate(explosionObject, gameObject.transform.position, Quaternion.identity);
-        Destroy(this.gameObject);
+        GameControl.Destroy(this.gameObject);
     }
 
-    override public void Hurt(float damage, GameObject attacker)
+    public virtual void Hurt(float damage, GameObject attacker)
     {
         guage.value -= damage;
         
@@ -86,7 +87,7 @@ public class Enemy : Damageable
         }
     }
 
-    override public void Die()
+    public virtual void Die()
     {
         baseDamage = 0f;
         if (GetComponent<EnemyWalk>() != null) GetComponent<EnemyWalk>().enabled = false;
@@ -98,7 +99,6 @@ public class Enemy : Damageable
 
     protected IEnumerator WaitAndExplode(float waitTime)
     {
-        
         yield return new WaitForSeconds(waitTime);
         
         this.Explode();

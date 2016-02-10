@@ -1,13 +1,14 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class BossTurret : Enemy
 {
+    //Private references
     private EnemyHead head;
     private Transform body;
     private EnemyWalk enemyWalk;
     private Animator animator;
-    private NavMeshAgent navMeshAgent;
     private Rigidbody rigidBody;
 
     //For Animation States
@@ -15,16 +16,25 @@ public class BossTurret : Enemy
 
     //Dash Attack variables
     private float dashSpeed = 50.0f;
-    private float dashChargeDuration = 2.0f;
+    private float dashChargeDuration = 1.25f;
     private float dashAttackDuration = 0.75f;
+    private float dashFinishedDuration = 1.0f;
     private Vector3 dashTargetPosition;
     private float dashTargetRemaining;
 
     //Jump Attack variables
     private float jumpSpeed = 50f;
 
-    private enum BossTurretState {IDLE, DASH_CHARGING, DASH_ATTACKING, DASH_FINISHED, JUMP_START, JUMP_RISING, FALLING};
-    public bool navMesh = false;
+    //Fire Weapon variables
+    private float fireWeaponDuration = 2.0f;
+
+    private enum BossTurretState
+    {
+        WANDER,                                         //Wander around
+        DASH_CHARGING, DASH_ATTACKING, DASH_FINISHED,   //Dash attack
+        JUMP_START, JUMP_RISING, FALLING,               //Jump attack
+        FIRE_WEAPON                                     //Fire weapon
+    };
 
     // Use this for initialization
     protected override void Start()
@@ -34,181 +44,188 @@ public class BossTurret : Enemy
         body = this.transform.FindChild("Body");
         enemyWalk = GetComponent<EnemyWalk>();
         animator = GetComponent<Animator>();
-
-        if (head == null) throw new System.Exception("Unable to find Head");
-        if (enemyWalk == null) throw new System.Exception("Unable to find Enemy Walk");
+        rigidBody = GetComponent<Rigidbody>();
 
         //Load a blaster as our weapon
-        Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
-        GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, Quaternion.identity) as GameObject;
-        blasterWeapon.transform.parent = body;
-        weapon = blasterWeapon.GetComponent<Weapon>();
-        weapon.weaponFireMode = 0;
+        GameObject turretCannon = GameControl.Spawn(Spawnable.Type.WEAPON_TURRET_CANNON, gameObject.transform.position, Quaternion.identity);
+        turretCannon.transform.parent = body;
+        weapon = turretCannon.GetComponent<Weapon>();
 
-        navMeshAgent = GetComponent<NavMeshAgent>();
-        rigidBody = GetComponent<Rigidbody>();
+        //Set our initial state to wander
+        setCurrentState((int)BossTurretState.WANDER);
+        head.state = EnemyHead.State.IDLE;
+        enemyWalk.state = EnemyWalk.State.IDLE;
+
+        //Set our head to search
+        List<GameObject> heroList = GameControl.control.level.GetHeroList();
+        head.SearchForTargets(heroList);
+
     }
 
     // Update is called once per frame
     protected override void Update()
     {
-        navMesh = navMeshAgent.isActiveAndEnabled;
         base.Update();
-        if (Input.GetKeyDown(KeyCode.J))
-            setCurrentState((int)BossTurretState.JUMP_START);
 
-        switch(currentState)
+        switch (currentState)
         {
-            case (int)BossTurretState.IDLE:
-                idle();
+            case (int)BossTurretState.WANDER:
+                updateWander();
                 break;
             case (int)BossTurretState.DASH_CHARGING:
-                dashCharge();
+                updateDashCharge();
                 break;
             case (int)BossTurretState.DASH_ATTACKING:
-                dashAttack();
+                updateDashAttack();
                 break;
             case (int)BossTurretState.DASH_FINISHED:
-                dashFinish();
+                updateDashFinish();
                 break;
             case (int)BossTurretState.JUMP_START:
-                jumpStart();
+                updateJumpStart();
                 break;
             case (int)BossTurretState.JUMP_RISING:
-                jumpRising();
+                updateJumpRising();
                 break;
             case (int)BossTurretState.FALLING:
-                jumpFall();
+                updateJumpFall();
+                break;
+            case (int)BossTurretState.FIRE_WEAPON:
                 break;
         }
 
         updateAnimationStates();
     }
 
-    private void idle()
+    private void updateWander()
     {
-        /*
-        if (enemyWalk.state == EnemyWalk.State.OFFENSE)
+        if (head.state == EnemyHead.State.LOCKED)
         {
-            if (head.currentState == EnemyHeadState.LOCKED)
-            {
-                int rand = Random.Range(0, 2);
-                switch (rand)
-                {
-                    case 0:
-                        //setNextState((int)BossTurretState.DASH_CHARGING, 0);
-                        setNextState((int)BossTurretState.JUMP_START, 0);
-                        break;
-                    case 1:
-                        setNextState((int)BossTurretState.JUMP_START, 0);
-                        break;
-                }
-            }
-            else
-            {
-                isAttacking = false;
-            }
-        }*/
-    }
-
-    private void dashCharge()
-    {
-        //Do Charging up
-        isAttacking = true; //Just for animation
-        navMeshAgent.Stop(); // Stop moving
-        rigidBody.velocity = Vector3.zero;
-        dashTargetPosition = head.lookAtTarget.position;
-        dashTargetRemaining = float.MaxValue;
-
-        setNextState((int)BossTurretState.DASH_ATTACKING, dashChargeDuration);
-    }
-
-    private void dashAttack()
-    {
-        //Do dash attack
-        float currentDashTargetRemaining = (dashTargetPosition - this.transform.position).magnitude;
-        if (currentDashTargetRemaining > dashTargetRemaining)
-        {
-            dashFinish(); 
+            attack();
         }
         else
         {
-            navMeshAgent.Stop();
-            Vector3 forwardNoY = new Vector3(this.transform.forward.x, 0f, this.transform.forward.z);
-            rigidBody.velocity = forwardNoY.normalized * dashSpeed;
-            isAttacking = false; //Just for animation
-            dashTargetRemaining = currentDashTargetRemaining;
-
-            setNextState((int)BossTurretState.DASH_FINISHED, dashAttackDuration);
+            head.state = EnemyHead.State.SEARCHING;
+            enemyWalk.state = EnemyWalk.State.RANDOM;
+            isAttacking = false;
         }
     }
 
-    private void dashFinish()
+    private void attack()
     {
-        enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
-        rigidBody.velocity = Vector3.zero;
-        navMeshAgent.Resume();
-        isAttacking = false;
-
-        setCurrentState((int)BossTurretState.IDLE);
+        int rand = Random.Range(0, 3);
+        switch (rand)
+        {
+            case 0:
+                setCurrentState((int)BossTurretState.DASH_CHARGING);
+                updateDashCharge();
+                break;
+            case 1:
+                setCurrentState((int)BossTurretState.JUMP_START);
+                updateJumpStart();
+                break;
+            case 2:
+                setCurrentState((int)BossTurretState.FIRE_WEAPON);
+                updateFireWeapon();
+                break;
+        }
     }
 
-    private void jumpStart()
+    private void updateDashCharge()
     {
-        //Disable the nav mesh agent
-        Debug.Log("Jump starting... ");
-        navMeshAgent.enabled = false;
-        
-        Vector3 jumpVelocity;
-        //if (Common.Calculations.ProjectileLaunchVector3(this.transform.position, head.lookAtTarget.position, jumpSpeed, out jumpVelocity, 0f))
-        if (Common.Calculations.ProjectileLaunchVector3(this.transform.position, Vector3.zero, jumpSpeed, out jumpVelocity, 0f))
+        setNextState((int)BossTurretState.DASH_ATTACKING, dashChargeDuration);
+
+        enemyWalk.state = EnemyWalk.State.IDLE;
+        isAttacking = true; //Just for animation
+        dashTargetRemaining = float.MaxValue;
+
+        //Turn body towards target
+        this.transform.LookAt(head.lookAtTarget);
+        rigidBody.velocity = Vector3.zero;
+        dashTargetPosition = head.lookAtTarget.position;
+    }
+
+    private void updateDashAttack()
+    {
+        //Check if we've reached our destination yet
+        float currentDashTargetRemaining = (dashTargetPosition - this.transform.position).magnitude;
+        if (currentDashTargetRemaining <= dashTargetRemaining)
         {
-            //navMeshAgent.enabled = false;
+            Vector3 forwardNoY = new Vector3(this.transform.forward.x, 0f, this.transform.forward.z);
+            rigidBody.velocity = forwardNoY.normalized * dashSpeed;
+            dashTargetRemaining = currentDashTargetRemaining;
+            enemyWalk.state = EnemyWalk.State.IDLE;
+            head.state = EnemyHead.State.IDLE;
+            isAttacking = false; //Just for animation
+
+            setNextState((int)BossTurretState.DASH_FINISHED, dashAttackDuration);
+        }
+        else
+        {
+            //We reached our destination
+            setCurrentState((int)BossTurretState.DASH_FINISHED);
+            updateDashFinish();
+        }
+    }
+
+    private void updateDashFinish()
+    {
+        //stand idle to recover from dash
+        enemyWalk.state = EnemyWalk.State.IDLE;
+        head.state = EnemyHead.State.IDLE;
+        rigidBody.velocity = Vector3.zero;
+        isAttacking = false;
+
+        setNextState((int)BossTurretState.WANDER, dashFinishedDuration);
+    }
+
+    private void updateJumpStart()
+    {
+        enemyWalk.state = EnemyWalk.State.IDLE;
+
+        Vector3 jumpVelocity;
+        if (Common.Calculations.ProjectileLaunchVector3(this.transform.position, head.lookAtTarget.position, jumpSpeed, out jumpVelocity, 0f))
+        {
             rigidBody.velocity = jumpVelocity;
-            Debug.Log("jump velocity: " + jumpVelocity.ToString());
         }
 
         setCurrentState((int)BossTurretState.JUMP_RISING);
     }
 
-    private void jumpRising()
+    private void updateJumpRising()
     {
+        enemyWalk.state = EnemyWalk.State.DISABLE_NAVMESH;
+        head.state = EnemyHead.State.IDLE;
+
         float angleFromGravity = Vector3.Angle(Physics.gravity, rigidBody.velocity);
-        Debug.Log("Jump rising. Angle From Gravity: " + angleFromGravity);
         if (angleFromGravity <= 90f)
+        {
             setCurrentState((int)BossTurretState.FALLING);
-    }
-
-    private void jumpFall()
-    {
-        Debug.Log("Jump falling ");
-        
-        
-        float maxDistance = 2.0f;
-        float threshold = 2.0f;
-        NavMeshHit hit;
-
-        //Check how close we are to navmesh
-        if (NavMesh.SamplePosition(this.transform.position, out hit, maxDistance, 1) == false)
-            return;
-
-        //Re-enable the navmesh when we are close enough
-        if (hit.distance <= threshold)
-        { 
-            navMeshAgent.enabled = true;
-            enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
-            rigidBody.velocity = Vector3.zero;
-            isAttacking = false;
-
-            setCurrentState((int)BossTurretState.IDLE);
+            updateJumpFall();
         }
     }
 
-    private void fireWeapon()
+    private void updateJumpFall()
     {
-        if (weapon == null) return;
+        enemyWalk.state = EnemyWalk.State.IDLE;
+        head.state = EnemyHead.State.IDLE;
 
-        weapon.Fire();
+        setCurrentState((int)BossTurretState.WANDER);
+    }
+
+    private void updateFireWeapon()
+    {
+        setNextState((int)BossTurretState.WANDER, fireWeaponDuration);
+
+        enemyWalk.state = EnemyWalk.State.IDLE;
+        isAttacking = true; //Just for animation
+
+        //Turn body towards target
+        this.transform.LookAt(head.lookAtTarget);
+        rigidBody.velocity = Vector3.zero;
+
+        if (weapon != null)
+            weapon.Fire();
     }
 
     private void updateAnimationStates()

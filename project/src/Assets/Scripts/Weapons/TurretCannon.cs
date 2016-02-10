@@ -1,10 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-
-public enum BlasterMode { NONE, STRAIGHT, RING }
-public class Blaster : Weapon
+public class TurretCannon : Weapon
 {
+    public enum Mode { NONE, STRAIGHT, RING }
     public float clipReloadTime; // Time it takes to reload a clip
     public float bulletReloadTime; // Time it takes to reload 1 bullet within a clip
     private int bulletCount; //Number of rounds fired this wave
@@ -19,7 +18,7 @@ public class Blaster : Weapon
         state = WeaponState.GUN;
         damage = 40f;
         nextFireTime = 0f;
-        weaponFireMode = (int)BlasterMode.RING;
+        weaponFireMode = (int)Mode.RING;
 
         resetFireMode();
 
@@ -33,7 +32,7 @@ public class Blaster : Weapon
     {
         switch (weaponFireMode)
         {
-            case (int)BlasterMode.STRAIGHT: //burst fire 3 shots
+            case (int)Mode.STRAIGHT: //burst fire 3 shots
                 clipReloadTime = 1f;
                 bulletReloadTime = 0.1f;
                 bulletCount = 0;
@@ -42,7 +41,7 @@ public class Blaster : Weapon
                 bulletLiveTime = 1f;
                 break;
 
-            case (int)BlasterMode.RING: // Ring
+            case (int)Mode.RING: // Ring
                 clipReloadTime = 2f;
                 bulletReloadTime = 0.5f; //Not used
                 bulletCount = 0; //Not used
@@ -63,15 +62,15 @@ public class Blaster : Weapon
 
         switch (weaponFireMode)
         {
-            case (int)BlasterMode.STRAIGHT: fireOne(); break;
-            case (int)BlasterMode.RING: fireRing(); break;
+            case (int)Mode.STRAIGHT: fireOne(); break;
+            case (int)Mode.RING: fireRing(); break;
         }
     }
 
 
     private void createProjectile(Vector3 position, Quaternion rotation, Vector3 direction)
     {
-        GameObject bullet = GameControl.Spawn(Spawnable.Type.PROJECTILE, position, rotation); 
+        GameObject bullet = GameControl.Spawn(Spawnable.Type.PROJECTILE, position, rotation);
         bullet.name = "Blaster Projectile";
 
         Projectile projectile = bullet.GetComponent<Projectile>();

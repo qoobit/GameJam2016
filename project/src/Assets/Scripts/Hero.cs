@@ -5,7 +5,7 @@ using System.Collections.Generic;
 //public enum HeroState { IDLE, WALKING, JUMPING, DASHING, SHOOTING };
 public enum DamageState { HEALTHY, STUNNED, DEAD };
 
-public class Hero : Damageable {
+public class Hero : MonoBehaviour, IDamageable {
     public float hp;
     public Vector3 hmdForward;
     public Vector3 facing;
@@ -112,7 +112,7 @@ public class Hero : Damageable {
             if(dashing)
             {
                 //crash attack
-                other.gameObject.GetComponent<Damageable>().Hurt(100f, this.gameObject);
+                other.gameObject.GetComponent<IDamageable>().Hurt(100f, this.gameObject);
                 dashAllowed = true;
             }
         }
@@ -323,7 +323,7 @@ public class Hero : Damageable {
         }
     }
 
-    override public void Hurt(float damage, GameObject attacker)
+    public void Hurt(float damage, GameObject attacker)
     {
         //Don't take damage if we are stunned
         if (stunAge > 0f) return;
@@ -342,7 +342,7 @@ public class Hero : Damageable {
         }
     }
 
-    override public void Die()
+    public void Die()
     {
         if (damageState == DamageState.DEAD) return;
 

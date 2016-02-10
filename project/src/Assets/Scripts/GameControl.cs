@@ -129,6 +129,44 @@ public class GameControl : MonoBehaviour {
             camera.GetComponent<ThirdPersonCamera>().lookAtTarget = hero.transform;
         }
     }
+
+    public static GameObject Spawn(Spawnable.Type type, Vector3 position, Quaternion rotation)
+    {
+        string resourceString = Spawnable.GetResourceString(type);
+        UnityEngine.Object obj = Resources.Load(resourceString, typeof(GameObject));
+        GameObject gameObject = GameObject.Instantiate(obj, position, rotation) as GameObject;
+
+        ISpawnable spawnable = gameObject.GetComponent<ISpawnable>();
+        if (spawnable == null)
+            throw new System.Exception("Unable to register spawnable. No Spawnable component found.");
+
+        spawnable.spawnType = type;
+        GameControl.RegisterSpawnable(gameObject);        
+
+        return gameObject;
+    }
+
+    public static void Destroy(GameObject gameObject)
+    {
+        GameControl.UnregisterSpawnable(gameObject);
+        GameObject.Destroy(gameObject);
+    }
+
+    public static void RegisterSpawnable(GameObject gameObject)
+    {
+        if (GameControl.control.level == null)
+            throw new System.Exception("Unable to register spawnable. No instance of Level found");
+
+        GameControl.control.level.RegisterSpawnable(gameObject);
+    }
+
+    public static void UnregisterSpawnable(GameObject gameObject)
+    {
+        if (GameControl.control.level == null)
+            throw new System.Exception("Unable to unregister spawnable. No instance of Level found");
+
+        GameControl.control.level.UnregisterSpawnable(gameObject);
+    }
 }
 
 [Serializable]

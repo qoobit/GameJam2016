@@ -4,6 +4,10 @@ using System.Collections.Generic;
 
 public class Turret : Enemy
 {
+    // Public parameters
+    public float attackAngleLimit = 10.0f; //Fire our weapon if we are facing our target within n degrees
+
+    // Private references
     private EnemyHead head;
     private Transform body;
     private EnemyWalk enemyWalk;
@@ -21,12 +25,8 @@ public class Turret : Enemy
         enemyWalk = GetComponent<EnemyWalk>();
         animator = GetComponent<Animator>();
 
-        if (head == null) throw new System.Exception("Unable to find Head");
-        if (enemyWalk == null) throw new System.Exception("Unable to find Enemy Walk");
-
         //Load a blaster as our weapon
-        Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
-        GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, Quaternion.identity) as GameObject;
+        GameObject blasterWeapon = GameControl.Spawn(Spawnable.Type.WEAPON_BLASTER, gameObject.transform.position, Quaternion.identity);
         blasterWeapon.transform.parent = body;
         weapon = blasterWeapon.GetComponent<Weapon>();
         weapon.weaponFireMode = 0;
@@ -40,7 +40,7 @@ public class Turret : Enemy
     }
 
     // Update is called once per frame
-    protected override void Update ()
+    protected override void Update()
     {
         base.Update();
 
@@ -56,7 +56,7 @@ public class Turret : Enemy
         else if (head.state == EnemyHead.State.SEARCHING)
         {
             enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
-        }        
+        }
 
         updateAnimationStates();
     }
@@ -65,7 +65,11 @@ public class Turret : Enemy
     {
         if (weapon == null) return;
 
-        weapon.Fire();
+        //If we are looking in the general direction of our target, fire our weapon
+        if (Vector3.Angle(body.transform.forward, head.lookAtTarget.position - body.transform.position) <= attackAngleLimit)
+        {
+            weapon.Fire();
+        }
     }
 
     private void updateAnimationStates()

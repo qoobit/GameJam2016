@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-abstract public class Damageable : MonoBehaviour
+public interface IDamageable
 {
-    abstract public void Hurt(float damage, GameObject attacker);
-    abstract public void Die();
+    void Hurt(float damage, GameObject attacker);
+    void Die();
 }
