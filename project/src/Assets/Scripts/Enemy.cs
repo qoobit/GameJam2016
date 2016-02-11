@@ -3,6 +3,7 @@ using System.Collections;
 
 public class Enemy : Damageable
 {
+    [Header("Enemy Status")]
     public float hp = 100f;
     public float baseDamage = 0f;
 
@@ -26,6 +27,7 @@ public class Enemy : Damageable
 
     void OnCollisionEnter(Collision collision)
     {
+        
         if (baseDamage == 0) return;
 
         Damageable damageable = collision.gameObject.GetComponent<Damageable>();

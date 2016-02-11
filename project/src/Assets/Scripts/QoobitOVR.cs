@@ -8,6 +8,7 @@ public class QoobitOVR : MonoBehaviour
     public GameObject FocusObject;
     GameObject LastFocusObject;
     public bool SearchForObject;
+    Transform Focal;
     
 
     // Use this for initialization
@@ -27,6 +28,7 @@ public class QoobitOVR : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        
         Reticle.SetActive(false);
         FocusObject = null;
         if (SearchForObject)
@@ -51,7 +53,14 @@ public class QoobitOVR : MonoBehaviour
                 Reticle.SetActive(true);
                 FocusObject = hit.collider.gameObject;
 
-                Vector3 targetCenter = FocusObject.transform.TransformPoint(FocusObject.GetComponent<CapsuleCollider>().center);
+                Vector3 targetCenter = Vector3.zero;
+                if (FocusObject.GetComponent<CapsuleCollider>())
+                {
+                    targetCenter = FocusObject.transform.TransformPoint(FocusObject.GetComponent<CapsuleCollider>().center);
+                }
+                if (FocusObject.GetComponent<BoxCollider>()) { 
+                    targetCenter = FocusObject.transform.TransformPoint(FocusObject.GetComponent<BoxCollider>().center);
+                }
                 Vector3 directionToCenter = targetCenter - Camera.main.transform.position;
                 directionToCenter.Normalize();
                 Reticle.transform.position = targetCenter - (directionToCenter * 3f);
@@ -61,11 +70,27 @@ public class QoobitOVR : MonoBehaviour
         }
 
         LastFocusObject = FocusObject;
+
+        //Oculus look vector
+        Debug.DrawLine(Camera.main.transform.position, Camera.main.transform.position + (Camera.main.transform.forward * 100f), Color.red);
+
+        if (Focal != null)
+        {
+            Vector3 directionToFocal = Focal.position - transform.position;
+            directionToFocal.Normalize();
+            Debug.DrawLine(transform.position, transform.position + (directionToFocal * 100f), Color.blue);
+        }
+
+        
     }
 
     public void Realign(Vector3 position, Transform lookAt)
     {
         transform.position = position;
+
         transform.LookAt(lookAt);
+        Focal = lookAt;
+        OVRManager.display.RecenterPose();
+
     }
 }

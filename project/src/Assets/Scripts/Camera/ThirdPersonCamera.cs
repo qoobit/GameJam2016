@@ -12,16 +12,21 @@ public class ThirdPersonCamera : MonoBehaviour
     // Use this for initialization
     void Start ()
     {
+        
     }
 	
 	// Update is called once per frame
 	void Update ()
     {
+        GetComponent<Camera>().aspect = (float)Screen.width / (float)Screen.height;
+        //Debug.Log(Screen.width + " " + Screen.height);
         if (lookAtTarget != null)
         {
             Vector3 cameraDirection = Quaternion.Euler(0f, lookAtTarget.rotation.eulerAngles.y, 0f) * Quaternion.Euler(angleX, angleY, angleZ) * Vector3.forward;
             this.transform.position = lookAtTarget.transform.position + (cameraDirection * -distance);
             this.transform.LookAt(lookAtTarget);
         }
+        //Debug.Log(GetComponent<Camera>().aspect);
+        
     }
 }

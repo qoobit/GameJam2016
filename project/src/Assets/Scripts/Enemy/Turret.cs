@@ -3,6 +3,9 @@ using System.Collections;
 
 public class Turret : Enemy
 {
+
+    [Header("Turret Parameters")]
+
     private EnemyHead head;
     private Transform body;
     private EnemyBase enemyBase;
