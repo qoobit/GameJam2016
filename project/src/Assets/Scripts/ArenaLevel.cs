@@ -100,7 +100,7 @@ public class ArenaLevel : Level
         {
             if (turret != null)
             {
-                turret.GetComponent<Turret>().Explode();
+                turret.GetComponent<Turret>().Die();
             }
         }
     }
@@ -124,5 +124,17 @@ public class ArenaLevel : Level
         bossEnemyWalk.waypointCollection = waypointCollection;
 
         boss = bossTurret;
+    }
+
+    override protected List<GameObject> getEntityList(Spawnable.Type type)
+    {
+        switch (type)
+        {
+            case Spawnable.Type.ENEMY_TURRET:
+                return turretList;
+
+            default:
+                return base.getEntityList(type);
+        }
     }
 }

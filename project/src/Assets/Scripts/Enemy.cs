@@ -46,7 +46,7 @@ public class Enemy : MonoBehaviour, IDamageable, ISpawnable
         }
     }
 
-    void OnCollisionEnter(Collision collision)
+    protected virtual void OnCollisionEnter(Collision collision)
     {
         if (baseDamage == 0) return;
 
@@ -55,7 +55,7 @@ public class Enemy : MonoBehaviour, IDamageable, ISpawnable
             damageable.Hurt(baseDamage, this.gameObject);
     }
 
-    void OnTriggerStay(Collider other)
+    protected virtual void OnTriggerStay(Collider other)
     {
         if (baseDamage == 0) return;
         

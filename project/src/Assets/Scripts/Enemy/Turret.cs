@@ -6,15 +6,19 @@ public class Turret : Enemy
 {
     // Public parameters
     public float attackAngleLimit = 10.0f; //Fire our weapon if we are facing our target within n degrees
+    public float frictionCoefficient = 0.2f; //Apply friction when Turret is shot as a projectile from TurretCannon
 
     // Private references
     private EnemyHead head;
     private Transform body;
     private EnemyWalk enemyWalk;
     private Animator animator;
+    private Rigidbody rigidBody;
 
     //For Animation States
     private bool isAttacking;
+
+    public Vector3 velocity;
 
     // Use this for initialization
     protected override void Start()
@@ -22,11 +26,12 @@ public class Turret : Enemy
         base.Start();
         head = GetComponent<EnemyHead>();
         body = this.transform.FindChild("Body");
+        rigidBody = GetComponent<Rigidbody>();
         enemyWalk = GetComponent<EnemyWalk>();
         animator = GetComponent<Animator>();
 
         //Load a blaster as our weapon
-        GameObject blasterWeapon = GameControl.Spawn(Spawnable.Type.WEAPON_BLASTER, gameObject.transform.position, Quaternion.identity);
+        GameObject blasterWeapon = GameControl.Spawn(Spawnable.Type.WEAPON_BLASTER, gameObject.transform.position, gameObject.transform.rotation);
         blasterWeapon.transform.parent = body;
         weapon = blasterWeapon.GetComponent<Weapon>();
         weapon.weaponFireMode = 0;
@@ -58,6 +63,8 @@ public class Turret : Enemy
             enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
         }
 
+        applyFriction();
+
         updateAnimationStates();
     }
 
@@ -70,6 +77,13 @@ public class Turret : Enemy
         {
             weapon.Fire();
         }
+    }
+
+    private void applyFriction()
+    {
+        rigidBody.velocity *= (1 - (frictionCoefficient * Time.deltaTime));
+        if (rigidBody.velocity.magnitude <= 0.5f)
+            rigidBody.velocity = Vector3.zero;
     }
 
     private void updateAnimationStates()

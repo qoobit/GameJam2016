@@ -47,9 +47,10 @@ public class BossTurret : Enemy
         rigidBody = GetComponent<Rigidbody>();
 
         //Load a blaster as our weapon
-        GameObject turretCannon = GameControl.Spawn(Spawnable.Type.WEAPON_TURRET_CANNON, gameObject.transform.position, Quaternion.identity);
+        GameObject turretCannon = GameControl.Spawn(Spawnable.Type.WEAPON_TURRET_CANNON, gameObject.transform.position, gameObject.transform.rotation);
         turretCannon.transform.parent = body;
         weapon = turretCannon.GetComponent<Weapon>();
+        turretCannon.GetComponent<TurretCannon>().waypointCollection = enemyWalk.waypointCollection;
 
         //Set our initial state to wander
         setCurrentState((int)BossTurretState.WANDER);
@@ -91,6 +92,7 @@ public class BossTurret : Enemy
                 updateJumpFall();
                 break;
             case (int)BossTurretState.FIRE_WEAPON:
+                updateFireWeapon();
                 break;
         }
 
