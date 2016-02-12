@@ -16,12 +16,11 @@ public class GameControl : MonoBehaviour {
     public bool dash;
     public bool shoot;
     public static GameControl control;
-    public GameObject level;
+    public Level level;
 
     private bool enableMultiDisplay = true;
     private int displayCount = 1;
 
-    // Use this for initialization
     void Awake()
     {
         if (control == null)
@@ -36,34 +35,15 @@ public class GameControl : MonoBehaviour {
 
         activateMultiDisplays();
     }
-    /*
-	void Start () {
-        //init
-        SfxOn = true;
-        MusicOn = true;
-        level = null;
-        sceneName = portalName = "";
-        lives = 3;
-        health = 100f;
-        dash = false;
-        shoot = false;
-        
 
-        Load();
-
-        createMultiDisplayCameras();
-
-
-	}
-    */
-    IEnumerator Start()
+    void Start()
     {
-        yield return new WaitForEndOfFrame();
+        
         //init
         SfxOn = true;
         MusicOn = true;
-        level = null;
-        sceneName = portalName = "";
+        //level = null;
+        //sceneName = portalName = "";
         lives = 3;
         health = 100f;
         dash = false;
@@ -77,12 +57,12 @@ public class GameControl : MonoBehaviour {
 
     // Update is called once per frame
     void Update () {
-	
-	}
+        
+    }
 
     public void Load()
     {
-
+        Debug.Log(GameControl.control.level);
         Debug.Log("LOADING FROM " + Application.persistentDataPath + "/saveData.dat");
         Environment.SetEnvironmentVariable("MONO_REFLECTION_SERIALIZER", "yes");
         if (File.Exists(Application.persistentDataPath + "/saveData.dat"))
@@ -91,7 +71,7 @@ public class GameControl : MonoBehaviour {
             FileStream file = File.Open(Application.persistentDataPath + "/saveData.dat", FileMode.Open);
             UserData data = (UserData)bf.Deserialize(file);
             file.Close();
-
+            
             //loading goes here
             MusicOn = data.MusicOn;
             SfxOn = data.SfxOn;
@@ -101,8 +81,9 @@ public class GameControl : MonoBehaviour {
             health = data.health;
             shoot = data.shoot;
             dash = data.dash;
-
         }
+        
+        Debug.Log(GameControl.control.level);
     }
 
     public void Save()
@@ -121,6 +102,8 @@ public class GameControl : MonoBehaviour {
         data.dash = dash;
         data.sceneName = sceneName;
         data.portalName = portalName;
+
+        
         //saving goes here
 
         bf.Serialize(file, data);
@@ -172,6 +155,45 @@ public class GameControl : MonoBehaviour {
             }
             UnityEngine.VR.VRSettings.showDeviceView = false;
         }
+    }
+
+    public static GameObject Spawn(Spawnable.Type type, Vector3 position, Quaternion rotation)
+    {
+        string resourceString = Spawnable.GetResourceString(type);
+        UnityEngine.Object obj = Resources.Load(resourceString, typeof(GameObject));
+        GameObject gameObject = GameObject.Instantiate(obj, position, rotation) as GameObject;
+
+        ISpawnable spawnable = gameObject.GetComponent<ISpawnable>();
+        if (spawnable == null)
+            throw new System.Exception("Unable to register spawnable. No Spawnable component found.");
+
+        spawnable.spawnType = type;
+        GameControl.RegisterSpawnable(gameObject);        
+
+        return gameObject;
+    }
+
+    public static void Destroy(GameObject gameObject)
+    {
+        GameControl.UnregisterSpawnable(gameObject);
+        GameObject.Destroy(gameObject);
+    }
+
+    public static void RegisterSpawnable(GameObject gameObject)
+    {
+        
+        if (GameControl.control.level == null)
+            throw new System.Exception("Unable to register spawnable. No instance of Level found");
+
+        GameControl.control.level.RegisterSpawnable(gameObject);
+    }
+
+    public static void UnregisterSpawnable(GameObject gameObject)
+    {
+        if (GameControl.control.level == null)
+            throw new System.Exception("Unable to unregister spawnable. No instance of Level found");
+
+        GameControl.control.level.UnregisterSpawnable(gameObject);
     }
 }
 

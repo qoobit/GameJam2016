@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Projectile : MonoBehaviour {
+public class Projectile : MonoBehaviour, ISpawnable
+{
     public Vector3 direction;
     public float speed;
     public float liveTime;
@@ -9,43 +10,40 @@ public class Projectile : MonoBehaviour {
     public float damage;
     public GameObject owner; //The entity that fires the weapon
     public Weapon weapon; //The weapon that creates the projectile
-    
-	// Use this for initialization
-	void Start () {
+    public Spawnable.Type spawnType { get; set; }
+
+    void Start()
+    {
         speed = 20.0f;
         liveTime = 2.0f;
         createTime = Time.time;
         direction.Normalize();
-        
-	}
-	
-	// Update is called once per frame
-	void Update ()
+    }
+
+    void Update()
     {
         if ((Time.time - createTime) > liveTime)
-            Destroy(this.gameObject);
+            GameControl.Destroy(this.gameObject);
 
         this.gameObject.transform.position += direction * (speed * Time.deltaTime);
-	}
+    }
 
     void OnTriggerEnter(Collider collider)
     {
-        Damageable other = collider.gameObject.GetComponent<Damageable>();
+        IDamageable other = collider.gameObject.GetComponent<IDamageable>();
         if (other != null) other.Hurt(this.damage, this.gameObject);
 
         //Destroy this projectile
-        Destroy(this.gameObject);
+        GameControl.Destroy(this.gameObject);
     }
 
 
     void OnCollisionEnter(Collision collision)
     {
-
-        
-        Damageable other = collision.gameObject.GetComponent<Damageable>();
-        if (other != null)  other.Hurt(this.damage, this.gameObject);
+        IDamageable other = collision.gameObject.GetComponent<IDamageable>();
+        if (other != null) other.Hurt(this.damage, this.gameObject);
 
         //Destroy this projectile
-        Destroy(this.gameObject);
+        GameControl.Destroy(this.gameObject);
     }
 }

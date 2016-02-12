@@ -4,15 +4,14 @@ using System.Collections.Generic;
 
 public enum DamageState { HEALTHY, STUNNED, DEAD };
 
-public class Hero : Damageable {
-    
-//    public Weapon weapon;
-    
-    Vector3 hmdForward;
+public class Hero : MonoBehaviour, IDamageable {
+    public float hp;
+    public Vector3 hmdForward;
+
     public Vector3 facing;
     public DamageState damageState = DamageState.HEALTHY;
 
-    [Header("Reference GameObjects")]
+    
     public GameObject hmdRig;
     public GameObject Weapon;
     public GameObject Crosshair;
@@ -46,7 +45,6 @@ public class Hero : Damageable {
 
     public GameObject Focal;
 
-    [Header("Audio Clips")]
     public AudioClip JumpAudioClip;
     public AudioClip ShotAudioClip;
     public AudioClip WalkAudioClip;
@@ -149,7 +147,7 @@ public class Hero : Damageable {
     void OnTriggerExit(Collider other)
     {
         if (GameControl.control.level == null) return;
-        Debug.Log("OUT:" + other.gameObject.name);
+        //Debug.Log("OUT:" + other.gameObject.name);
         
         TouchingGameObject = null;
         
@@ -171,12 +169,12 @@ public class Hero : Damageable {
             if(dashing)
             {
                 //crash attack
-                other.gameObject.GetComponent<Damageable>().Hurt(100f, this.gameObject);
+                other.gameObject.GetComponent<IDamageable>().Hurt(100f, this.gameObject);
                 dashAllowed = true;
             }
         }
         
-        Debug.Log("IN:" + other.gameObject.name);
+        //Debug.Log("IN:" + other.gameObject.name);
         
 
         //get angle between hero and object
@@ -214,9 +212,7 @@ public class Hero : Damageable {
     {
         
         if (GameControl.control.level == null) return;
-
-       
-    
+        
     }
 
     void OnControllerColliderHit(ControllerColliderHit col)
@@ -459,7 +455,7 @@ public class Hero : Damageable {
         }
     }
 
-    override public void Hurt(float damage, GameObject attacker)
+    public void Hurt(float damage, GameObject attacker)
     {
 
         
@@ -480,7 +476,7 @@ public class Hero : Damageable {
         }
     }
 
-    override public void Die()
+    public void Die()
     {
         if (damageState == DamageState.DEAD) return;
 
@@ -581,6 +577,8 @@ public class Hero : Damageable {
             }
 
             
+
+            
         }
         else
         {
@@ -593,7 +591,7 @@ public class Hero : Damageable {
         }
       
 
-        //speed = movement.magnitude;
+        speed = movement.magnitude;
     }
 
     private void rotateCharacter(float theta)
@@ -627,8 +625,7 @@ public class Hero : Damageable {
         
         if (Input.GetButtonDown("B"))
         {
-            Debug.Log("DOWN");
-            Debug.Log(dashing + " " + dashAllowed + " " + jumpDash + " " + scaling);
+            
             if (!dashing && dashAllowed && jumpDash==0)
             {
                 
@@ -779,10 +776,12 @@ public class Hero : Damageable {
     {
         grabbing = true;
         GrabbingGameObject = TouchingGameObject;
+        GrabbingGameObject.transform.SetParent(transform);
+        GrabbingGameObject.GetComponent<Rigidbody>().isKinematic = true;
     }
     private void LiftObject()
     {
-        Debug.Log("LIFTING " + LiftingGameObject.name);
+        
         LiftingGameObject = TouchingGameObject;
         LiftingGameObject.GetComponent<Rigidbody>().isKinematic = true;
         LiftingGameObject.GetComponent<BoxCollider>().enabled = false;
@@ -790,21 +789,25 @@ public class Hero : Damageable {
         LiftingGameObject.transform.SetParent(LiftingReference.transform);
         LiftingGameObject.transform.localEulerAngles = Vector3.zero;
         lifting = true;
-        
+        Debug.Log("LIFTING " + LiftingGameObject.name);
     }
     private void DropObject()
     {
-        Debug.Log("DROPPING " + LiftingGameObject.name);
+
         //relieve existing object
         if (LiftingGameObject)
         {
             LiftingGameObject.GetComponent<Rigidbody>().isKinematic = false;
             LiftingGameObject.GetComponent<BoxCollider>().enabled = true;
             LiftingGameObject.transform.SetParent(transform.parent);
+            Debug.Log("DROPPING " + LiftingGameObject.name);
             LiftingGameObject = null;
+
         }
         if (GrabbingGameObject)
         {
+            GrabbingGameObject.transform.SetParent(transform.parent);
+            GrabbingGameObject.GetComponent<Rigidbody>().isKinematic = false;
             GrabbingGameObject = null;
         }
 
@@ -855,39 +858,43 @@ public class Hero : Damageable {
             }
             else
             {
+                
+                
                 if (LiftingGameObject != null)
                 {
-                    //throw lifted object
+                    //throw if lifting something
                     ThrowObject();
                 }
-
-                if (TouchingGameObject.GetComponent<Liftable>())
+                else
                 {
-                   
-                }
-                else if (TouchingGameObject.GetComponent<Grabbable>())
-                {
-                    DropObject();
-                }
-                if (Weapon.GetComponent<Weapon>() != null)
-                {
-                    shooting = true;
-                    ShotAudio.Play();
-                    Weapon.GetComponent<Weapon>().Fire();
+                    if (Weapon.GetComponent<Weapon>() != null)
+                    {
+                        shooting = true;
+                        ShotAudio.Play();
+                        Weapon.GetComponent<Weapon>().Fire();
+                    }
                 }
 
-                
 
             }
         }
         else if (Input.GetButton("X"))
         {
-            charging = true;
+            if (!grabbing && !lifting) {
+                charging = true;
+            }
+            
         }
         else if (Input.GetButtonUp("X"))
         {
             shooting = false;
             charging = false;
+            if (GrabbingGameObject)
+            {
+                GrabbingGameObject.transform.SetParent(transform.parent);
+                GrabbingGameObject.GetComponent<Rigidbody>().isKinematic = false;
+                GrabbingGameObject = null;
+            }
         }
     }
 

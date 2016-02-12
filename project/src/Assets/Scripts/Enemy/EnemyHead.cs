@@ -1,27 +1,29 @@
 ﻿using UnityEngine;
 using System.Collections;
-
-public enum EnemyHeadState { IDLE, SEARCHING, LOCKED, LOST }
+using System.Collections.Generic;
 
 public class EnemyHead : MonoBehaviour
 {
-    public float RotationLimitY = 75.0f;
-    public float RotationLimitX = 10.0f;
-    public float RotationMaxVelocity = 135.0f;
-    public float SphereCastRadius = 0.5f;
-    public float SightDistance = 15.0f;
-    public float TargetLostTimeout = 4.0f; // If target is out of sight, how long before we give up
+    public enum State { IDLE, SEARCHING, LOCKED, LOST }
 
+    // Public parameters
+    public State state = State.IDLE;
+    public float rotationLimitY = 75.0f; // How far we can turn our neck
+    public float rotationLimitX = 10.0f;
+    public float rotationMaxVelocity = 135.0f; // How fast we can turn our head
+    public float sightDistance = 15.0f; //How far we can see
+    public float sightRadius = 0.5f; // How narrow our line of sight is
+    public float targetLostTimeLimit = 4.0f; // If target is out of sight, how long before we give up  
+    public Transform lookAtTarget; //The target to lock on to
 
+    // Private variables for calculations
+    private Vector3 targetForward;
+    private float targetLastSeenTime; //Keeps track of when we last saw the target
+    public List<GameObject> searchTargets; //List of targets to search for
 
+    // Private references
     private Transform head;
     private Transform body;
-    public EnemyHeadState currentState;
-    public Transform lookAtTarget;
-    private Quaternion targetRotation;
-    private Quaternion lookingLeft;
-    private Quaternion lookingRight;
-    private float targetLastSeenTime; //Keeps track of when we last saw the target
 
     // Use this for initialization
     void Start()
@@ -32,148 +34,183 @@ public class EnemyHead : MonoBehaviour
         if (head == null) throw new System.Exception("Unable to find Head");
         if (body == null) throw new System.Exception("Unable to find Body");
 
-        targetRotation = head.localRotation;
-        lookingLeft = Quaternion.AngleAxis(-RotationLimitY, Vector3.up);
-        lookingRight = Quaternion.AngleAxis(RotationLimitY, Vector3.up);
-}
+        targetForward = Vector3.forward;
+    }
 
-    // Update is called once per frame
     void Update()
     {
+        this.updateHeadRotation();
 
-        switch (currentState)
+        switch (state)
         {
-            case EnemyHeadState.IDLE:
+            case State.IDLE:
+                this.updateIdle();
                 break;
 
-            case EnemyHeadState.SEARCHING:
+            case State.SEARCHING:
                 this.updateSearching();
-                this.lookForHero();
                 break;
 
-            case EnemyHeadState.LOCKED:
-            case EnemyHeadState.LOST:
-                this.updateLockedAndLost();
+            case State.LOCKED:
+                this.updateLocked();
+                break;
+
+            case State.LOST:
+                this.updateLost();
                 break;
         }
     }
-    
+
+    private void updateHeadRotation() //todo: fix our target forward so it's relative to our body (fix the debug too)
+    {
+        head.forward = Vector3.RotateTowards(head.forward, body.transform.rotation * targetForward, Mathf.Deg2Rad * rotationMaxVelocity * Time.deltaTime, 0.0f);
+        Debug.DrawRay(head.position, body.transform.rotation * targetForward * sightDistance, Color.cyan);
+        Debug.DrawRay(head.position, head.forward * sightDistance, Color.red);
+    }
+
+    private void updateIdle()
+    {
+        targetForward = Vector3.forward;
+    }
+
     private void updateSearching()
     {
-        head.localRotation = Quaternion.RotateTowards(head.localRotation, targetRotation, this.RotationMaxVelocity * Time.deltaTime);
-        
-        //Project head.forward vector on to body.up plane
-        Vector3 headForwardProjected = this.projectVector3OnPlane(head.forward, body.up).normalized;
-
-        //Get our current Y rotation
-        float headRotationY = Vector3.Angle(headForwardProjected, body.forward);
-
-        //Check if we have over rotated
-        if (headRotationY > this.RotationLimitY)
-            head.localRotation = targetRotation;
-
         //If we are close enough to our targetRotation, get next targetRotation
-        float remainder = Quaternion.Angle(head.localRotation, targetRotation);
+        float remainder = Vector3.Angle(head.forward, body.transform.rotation * targetForward);
         if (remainder <= 0.5f)
-            targetRotation = this.getNextSearchTargetRotation();
+            targetForward = this.getNextSearchTargetForward();
 
-        Debug.DrawRay(head.position, head.forward * SightDistance, Color.red);
-        return;
+        this.searchForTarget();
     }
 
-    private Vector3 projectVector3OnPlane(Vector3 v, Vector3 planeNormal)
+    private void searchForTarget()
     {
-        float dot = -Vector3.Dot(v, planeNormal);
-        return (v + (planeNormal * dot));
-    }
+        if (searchTargets == null)
+            return;
 
-    private void lookForHero()
-    {
         RaycastHit hitInfo;
-        Physics.SphereCast(head.position, SphereCastRadius, head.forward, out hitInfo, SightDistance);
+        Physics.SphereCast(head.position, sightRadius, head.forward, out hitInfo, sightDistance - sightRadius);
 
         if (hitInfo.collider == null)
             return;
 
-        //Check if the collider belongs to Hero
+        //Check if the collider belongs to our target
         Transform currentTransform = hitInfo.collider.transform;
         do
         {
-            if (currentTransform.name == "Hero")
+            foreach (GameObject searchTarget in searchTargets)
             {
-                this.LookAt(currentTransform);
-                targetLastSeenTime = Time.time;
-                currentState = EnemyHeadState.LOCKED;
-                break;
+                if (currentTransform == searchTarget.transform)
+                {
+                    state = State.LOCKED;
+                    lookAtTarget = searchTarget.transform;
+                    targetLastSeenTime = Time.time;
+                    return;
+                }
             }
-            else
-            {
-                currentTransform = currentTransform.parent;
-            }
-        } while (currentTransform != null);
+
+            currentTransform = currentTransform.parent;
+        }
+        while (currentTransform != null);
     }
 
-    private void updateLockedAndLost()
+    private void updateLocked()
     {
-        if (lookAtTarget == null)
-            currentState = EnemyHeadState.IDLE;
+        this.lockOnTarget();
+    }
 
-        //If we haven't seen the target in a while, change our state
-        if ((Time.time - targetLastSeenTime) >= this.TargetLostTimeout)
+    private void updateLost()
+    {
+        this.lockOnTarget();
+    }
+
+    public Vector3 rotationToTargetEuler;
+
+    private void lockOnTarget()
+    {
+        //If we haven't seen the target in a while, change our state to SEARCHING
+        if (lookAtTarget == null || Time.time > (this.targetLastSeenTime + this.targetLostTimeLimit))
         {
-            currentState = EnemyHeadState.IDLE;
+            state = State.SEARCHING;
             return;
         }
+        
+        Vector3 vectorToTarget = lookAtTarget.position - head.position;
+        Vector3 rotationToTarget = Quaternion.FromToRotation(body.transform.forward, vectorToTarget.normalized).eulerAngles;
+
 
         //If we can see the target, look at the target
-        Vector3 vectorToTarget = lookAtTarget.position - head.position;
-        if (vectorToTarget.magnitude <= (this.SightDistance + SphereCastRadius))
+        // and check if this rotation is within our limits
+        if (vectorToTarget.magnitude <= this.sightDistance &&
+            Mathf.Abs(Common.Calculations.ClampAngle180(rotationToTarget.x)) <= rotationLimitX &&
+            Mathf.Abs(Common.Calculations.ClampAngle180(rotationToTarget.y)) <= rotationLimitY)
         {
-            currentState = EnemyHeadState.LOCKED;
-            Vector3 vectorToTargetProjected = this.projectVector3OnPlane(vectorToTarget, body.up).normalized;
+            state = State.LOCKED;
+            targetLastSeenTime = Time.time;
+            targetForward = (Quaternion.Inverse(body.transform.rotation) * vectorToTarget).normalized;
+
+            /*
+            Vector3 vectorToTargetProjected = Vector3.ProjectOnPlane(vectorToTarget, body.up).normalized;
 
             float angleYToTarget = Vector3.Angle(body.transform.forward, vectorToTargetProjected);
-            if (angleYToTarget <= this.RotationLimitY)
-                head.LookAt(lookAtTarget);
-
-            targetLastSeenTime = Time.time;
+            if (angleYToTarget <= this.rotationLimitY)
+                targetForward = Quaternion.Inverse(body.transform.rotation) * vectorToTargetProjected;
+            */
         }
         else
         {
-            currentState = EnemyHeadState.LOST;
+            state = State.LOST;
         }
     }
 
-    public void LookForPlayer()
+    private Vector3 lookLeftVector3()
     {
-        if (currentState != EnemyHeadState.SEARCHING)
+        float rad = Mathf.Deg2Rad * rotationLimitY;
+        float x = -Mathf.Sin(rad);
+        float y = 0f;
+        float z = Mathf.Cos(rad);
+        return new Vector3(x, y, z).normalized;
+    }
+
+    private Vector3 lookRightVector3()
+    {
+        float rad = Mathf.Deg2Rad * rotationLimitY;
+        float x = Mathf.Sin(rad);
+        float y = 0f;
+        float z = Mathf.Cos(rad);
+        return new Vector3(x, y, z).normalized;
+    }
+
+    private Vector3 getRandomSearchTargetForward()
+    {
+        if (Random.Range(0, 1) == 0)
+            return lookLeftVector3();
+        else
+            return lookRightVector3();
+    }
+
+    private Vector3 getNextSearchTargetForward()
+    {
+        Vector3 left = lookLeftVector3();
+        if (targetForward.Equals(left))
+            return lookRightVector3();
+        else
+            return left;
+    }
+
+    public void SearchForTargets(List<GameObject> searchTargets)
+    {
+        this.searchTargets = searchTargets;
+        if (state != State.SEARCHING)
         {
-            targetRotation = this.getRandomSearchTargetRotation();
-            currentState = EnemyHeadState.SEARCHING;
+            targetForward = this.getRandomSearchTargetForward();
+            state = State.SEARCHING;
         }
     }
 
     public void LookAt(Transform target)
     {
         lookAtTarget = target;
-        currentState = EnemyHeadState.LOCKED;
-    }
-
-
-
-    private Quaternion getRandomSearchTargetRotation()
-    {
-        if (Random.Range(0, 1) == 0)
-            return lookingLeft;
-        else
-            return lookingRight;
-    }
-
-    private Quaternion getNextSearchTargetRotation()
-    {
-        if (targetRotation.Equals(lookingLeft))
-            return lookingRight;
-        else
-            return lookingLeft;
+        state = State.LOCKED;
     }
 }

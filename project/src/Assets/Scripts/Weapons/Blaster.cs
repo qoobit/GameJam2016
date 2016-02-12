@@ -71,8 +71,7 @@ public class Blaster : Weapon
 
     private void createProjectile(Vector3 position, Quaternion rotation, Vector3 direction)
     {
-        Object bulletObject = Resources.Load("Projectile", typeof(GameObject));
-        GameObject bullet = GameObject.Instantiate(bulletObject, position, rotation) as GameObject;
+        GameObject bullet = GameControl.Spawn(Spawnable.Type.PROJECTILE, position, rotation); 
         bullet.name = "Blaster Projectile";
 
         Projectile projectile = bullet.GetComponent<Projectile>();

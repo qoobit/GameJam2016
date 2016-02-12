@@ -2,17 +2,16 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class LevelA : MonoBehaviour {
+public class LevelA : Level {
 
     // Use this for initialization
-    void Start()
+    override protected void Start()
     {
         
         
     }
-	
-	// Update is called once per frame
-	void Update () {
-        GameControl.control.level = this.gameObject;
+
+    // Update is called once per frame
+    override protected void Update () {
     }
 }

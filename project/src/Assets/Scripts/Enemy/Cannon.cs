@@ -4,7 +4,7 @@ using System.Collections;
 public class Cannon : Enemy {
 
     // Use this for initialization
-    void Start ()
+    protected override void Start ()
     {
         //Load a blaster as our weapon
         Object blasterObject = Resources.Load("Weapons/Blaster", typeof(GameObject));
@@ -13,9 +13,9 @@ public class Cannon : Enemy {
         weapon = blasterWeapon.GetComponent<Weapon>();
         weapon.weaponFireMode = 1;
     }
-	
-	// Update is called once per frame
-	void Update ()
+
+    // Update is called once per frame
+    protected override void Update ()
     {
         if (this.weapon != null)
             this.weapon.Fire();
