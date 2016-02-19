@@ -108,16 +108,13 @@ public class ArenaLevel : Level
     private void spawnBoss()
     {
         GameObject bossSpawn = GameObject.Find("BossSpawn");
-
+        
         //Spawn the boss close to NavMesh at the beginning
-        Object bossTurretObject = Resources.Load("Enemies/BossTurret", typeof(GameObject));
-        GameObject bossTurret = GameObject.Instantiate(bossTurretObject, Vector3.zero, Quaternion.identity) as GameObject;
+        GameObject bossTurret = GameControl.Spawn(Spawnable.Type.BOSS_TURRET, bossSpawn.transform.position, bossSpawn.transform.rotation);
         bossTurret.name = "Boss";
         bossTurret.layer = LayerMask.NameToLayer("Enemy");
         NavMeshAgent bossAgent = bossTurret.GetComponent<NavMeshAgent>();
         bossAgent.enabled = false;
-        bossTurret.transform.position = bossSpawn.transform.position; //Move boss to bossSpawn after navMeshAgent is created
-        bossTurret.transform.rotation = bossSpawn.transform.rotation;
 
         EnemyWalk bossEnemyWalk = bossTurret.GetComponent<EnemyWalk>();
         GameObject waypointCollection = GameObject.Find("Waypoints");

@@ -71,6 +71,7 @@ public class EnemyWalk : MonoBehaviour
 
     private void updateIdle()
     {
+        agent.SetDestination(this.transform.position);
         if (agent.isOnNavMesh)
             agent.Stop();
     }

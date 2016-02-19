@@ -122,10 +122,12 @@ public class BossTurret : Enemy
                 setCurrentState((int)BossTurretState.DASH_CHARGING);
                 updateDashCharge();
                 break;
+
             case 1:
                 setCurrentState((int)BossTurretState.JUMP_START);
                 updateJumpStart();
                 break;
+
             case 2:
                 setCurrentState((int)BossTurretState.FIRE_WEAPON);
                 updateFireWeapon();
@@ -144,6 +146,7 @@ public class BossTurret : Enemy
         //Turn body towards target
         this.transform.LookAt(head.lookAtTarget);
         rigidBody.velocity = Vector3.zero;
+        rigidBody.angularVelocity = Vector3.zero;
         dashTargetPosition = head.lookAtTarget.position;
     }
 
@@ -155,6 +158,7 @@ public class BossTurret : Enemy
         {
             Vector3 forwardNoY = new Vector3(this.transform.forward.x, 0f, this.transform.forward.z);
             rigidBody.velocity = forwardNoY.normalized * dashSpeed;
+            rigidBody.angularVelocity = Vector3.zero;
             dashTargetRemaining = currentDashTargetRemaining;
             enemyWalk.state = EnemyWalk.State.IDLE;
             head.state = EnemyHead.State.IDLE;
@@ -176,6 +180,7 @@ public class BossTurret : Enemy
         enemyWalk.state = EnemyWalk.State.IDLE;
         head.state = EnemyHead.State.IDLE;
         rigidBody.velocity = Vector3.zero;
+        rigidBody.angularVelocity = Vector3.zero;
         isAttacking = false;
 
         setNextState((int)BossTurretState.WANDER, dashFinishedDuration);
@@ -189,6 +194,7 @@ public class BossTurret : Enemy
         if (Common.Calculations.ProjectileLaunchVector3(this.transform.position, head.lookAtTarget.position, jumpSpeed, out jumpVelocity, 0f))
         {
             rigidBody.velocity = jumpVelocity;
+            rigidBody.angularVelocity = Vector3.zero;
         }
 
         setCurrentState((int)BossTurretState.JUMP_RISING);
@@ -211,6 +217,7 @@ public class BossTurret : Enemy
     {
         enemyWalk.state = EnemyWalk.State.IDLE;
         head.state = EnemyHead.State.IDLE;
+        rigidBody.angularVelocity = Vector3.zero;
 
         setCurrentState((int)BossTurretState.WANDER);
     }
@@ -225,6 +232,7 @@ public class BossTurret : Enemy
         //Turn body towards target
         this.transform.LookAt(head.lookAtTarget);
         rigidBody.velocity = Vector3.zero;
+        rigidBody.angularVelocity = Vector3.zero;
 
         if (weapon != null)
             weapon.Fire();

@@ -62,7 +62,6 @@ public class GameControl : MonoBehaviour {
 
     public void Load()
     {
-        Debug.Log(GameControl.control.level);
         Debug.Log("LOADING FROM " + Application.persistentDataPath + "/saveData.dat");
         Environment.SetEnvironmentVariable("MONO_REFLECTION_SERIALIZER", "yes");
         if (File.Exists(Application.persistentDataPath + "/saveData.dat"))
@@ -82,8 +81,6 @@ public class GameControl : MonoBehaviour {
             shoot = data.shoot;
             dash = data.dash;
         }
-        
-        Debug.Log(GameControl.control.level);
     }
 
     public void Save()
