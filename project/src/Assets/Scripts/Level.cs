@@ -10,6 +10,9 @@ abstract public class Level : MonoBehaviour
     public List<GameObject> projectileList = new List<GameObject>();
     public List<GameObject> portalList = new List<GameObject>();
     public List<GameObject> heroList = new List<GameObject>();
+    
+    private float listCleanupTime = 5f;
+    private float nextCleanupTime = 10f;
 
     protected virtual void Start()
     {
@@ -34,7 +37,40 @@ abstract public class Level : MonoBehaviour
 
     protected virtual void Update()
     {
+        if (Time.time >= nextCleanupTime)
+        {
+            listCleanup();
+            nextCleanupTime = Time.time + listCleanupTime;
+        }
+    }
+
+    protected virtual void listCleanup()
+    {
+        //Remove any null pointers from our list
         
+        List<GameObject> newProjectileList = new List<GameObject>();
+        for(int i=0; i< projectileList.Count; i++)
+        {
+            if (projectileList[i] != null)
+                newProjectileList.Add(projectileList[i]);
+        }
+        projectileList = newProjectileList;
+
+        List<GameObject> newPortalList = new List<GameObject>();
+        for (int i = 0; i < portalList.Count; i++)
+        {
+            if (portalList[i] != null)
+                newPortalList.Add(portalList[i]);
+        }
+        portalList = newPortalList;
+
+        List<GameObject> newHeroList = new List<GameObject>();
+        for (int i = 0; i < heroList.Count; i++)
+        {
+            if (heroList[i] != null)
+                newHeroList.Add(heroList[i]);
+        }
+        heroList = newHeroList;
     }
 
     public List<GameObject> GetHeroList()

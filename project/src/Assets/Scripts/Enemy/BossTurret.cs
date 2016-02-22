@@ -10,6 +10,7 @@ public class BossTurret : Enemy
     private EnemyWalk enemyWalk;
     private Animator animator;
     private Rigidbody rigidBody;
+    private ArenaLevel arenaLevel;
 
     //For Animation States
     private bool isAttacking;
@@ -27,8 +28,9 @@ public class BossTurret : Enemy
 
     //Fire Weapon variables
     private float fireWeaponDuration = 2.0f;
+    private int maxMinions = 5;
 
-    private enum BossTurretState
+    private enum State
     {
         WANDER,                                         //Wander around
         DASH_CHARGING, DASH_ATTACKING, DASH_FINISHED,   //Dash attack
@@ -45,15 +47,17 @@ public class BossTurret : Enemy
         enemyWalk = GetComponent<EnemyWalk>();
         animator = GetComponent<Animator>();
         rigidBody = GetComponent<Rigidbody>();
+        arenaLevel = (ArenaLevel)GameControl.control.level;
 
         //Load a blaster as our weapon
         GameObject turretCannon = GameControl.Spawn(Spawnable.Type.WEAPON_TURRET_CANNON, gameObject.transform.position, gameObject.transform.rotation);
         turretCannon.transform.parent = body;
+        turretCannon.transform.localPosition = new Vector3(0f, 1f, 0f);
         weapon = turretCannon.GetComponent<Weapon>();
         turretCannon.GetComponent<TurretCannon>().waypointCollection = enemyWalk.waypointCollection;
 
         //Set our initial state to wander
-        setCurrentState((int)BossTurretState.WANDER);
+        setCurrentState((int)State.WANDER);
         head.state = EnemyHead.State.IDLE;
         enemyWalk.state = EnemyWalk.State.IDLE;
 
@@ -70,28 +74,28 @@ public class BossTurret : Enemy
 
         switch (currentState)
         {
-            case (int)BossTurretState.WANDER:
+            case (int)State.WANDER:
                 updateWander();
                 break;
-            case (int)BossTurretState.DASH_CHARGING:
+            case (int)State.DASH_CHARGING:
                 updateDashCharge();
                 break;
-            case (int)BossTurretState.DASH_ATTACKING:
+            case (int)State.DASH_ATTACKING:
                 updateDashAttack();
                 break;
-            case (int)BossTurretState.DASH_FINISHED:
+            case (int)State.DASH_FINISHED:
                 updateDashFinish();
                 break;
-            case (int)BossTurretState.JUMP_START:
+            case (int)State.JUMP_START:
                 updateJumpStart();
                 break;
-            case (int)BossTurretState.JUMP_RISING:
+            case (int)State.JUMP_RISING:
                 updateJumpRising();
                 break;
-            case (int)BossTurretState.FALLING:
+            case (int)State.FALLING:
                 updateJumpFall();
                 break;
-            case (int)BossTurretState.FIRE_WEAPON:
+            case (int)State.FIRE_WEAPON:
                 updateFireWeapon();
                 break;
         }
@@ -115,21 +119,26 @@ public class BossTurret : Enemy
 
     private void attack()
     {
-        int rand = Random.Range(0, 3);
+        int randMax = 3;
+
+        if (arenaLevel.turretList.Count >= maxMinions)
+            randMax = 2;
+
+        int rand = Random.Range(0, randMax);
         switch (rand)
         {
             case 0:
-                setCurrentState((int)BossTurretState.DASH_CHARGING);
+                setCurrentState((int)State.DASH_CHARGING);
                 updateDashCharge();
                 break;
 
             case 1:
-                setCurrentState((int)BossTurretState.JUMP_START);
+                setCurrentState((int)State.JUMP_START);
                 updateJumpStart();
                 break;
 
             case 2:
-                setCurrentState((int)BossTurretState.FIRE_WEAPON);
+                setCurrentState((int)State.FIRE_WEAPON);
                 updateFireWeapon();
                 break;
         }
@@ -137,7 +146,7 @@ public class BossTurret : Enemy
 
     private void updateDashCharge()
     {
-        setNextState((int)BossTurretState.DASH_ATTACKING, dashChargeDuration);
+        setNextState((int)State.DASH_ATTACKING, dashChargeDuration);
 
         enemyWalk.state = EnemyWalk.State.IDLE;
         isAttacking = true; //Just for animation
@@ -152,9 +161,17 @@ public class BossTurret : Enemy
 
     private void updateDashAttack()
     {
+        Debug.DrawLine(this.transform.position, dashTargetPosition, Color.green);
+
         //Check if we've reached our destination yet
         float currentDashTargetRemaining = (dashTargetPosition - this.transform.position).magnitude;
-        if (currentDashTargetRemaining <= dashTargetRemaining)
+        if (currentDashTargetRemaining > dashTargetRemaining)
+        {
+            //We reached our destination
+            setCurrentState((int)State.DASH_FINISHED);
+            updateDashFinish();
+        }
+        else
         {
             Vector3 forwardNoY = new Vector3(this.transform.forward.x, 0f, this.transform.forward.z);
             rigidBody.velocity = forwardNoY.normalized * dashSpeed;
@@ -164,13 +181,7 @@ public class BossTurret : Enemy
             head.state = EnemyHead.State.IDLE;
             isAttacking = false; //Just for animation
 
-            setNextState((int)BossTurretState.DASH_FINISHED, dashAttackDuration);
-        }
-        else
-        {
-            //We reached our destination
-            setCurrentState((int)BossTurretState.DASH_FINISHED);
-            updateDashFinish();
+            setNextState((int)State.DASH_FINISHED, dashAttackDuration);
         }
     }
 
@@ -183,7 +194,7 @@ public class BossTurret : Enemy
         rigidBody.angularVelocity = Vector3.zero;
         isAttacking = false;
 
-        setNextState((int)BossTurretState.WANDER, dashFinishedDuration);
+        setNextState((int)State.WANDER, dashFinishedDuration);
     }
 
     private void updateJumpStart()
@@ -197,7 +208,7 @@ public class BossTurret : Enemy
             rigidBody.angularVelocity = Vector3.zero;
         }
 
-        setCurrentState((int)BossTurretState.JUMP_RISING);
+        setCurrentState((int)State.JUMP_RISING);
     }
 
     private void updateJumpRising()
@@ -208,7 +219,7 @@ public class BossTurret : Enemy
         float angleFromGravity = Vector3.Angle(Physics.gravity, rigidBody.velocity);
         if (angleFromGravity <= 90f)
         {
-            setCurrentState((int)BossTurretState.FALLING);
+            setCurrentState((int)State.FALLING);
             updateJumpFall();
         }
     }
@@ -219,12 +230,12 @@ public class BossTurret : Enemy
         head.state = EnemyHead.State.IDLE;
         rigidBody.angularVelocity = Vector3.zero;
 
-        setCurrentState((int)BossTurretState.WANDER);
+        setCurrentState((int)State.WANDER);
     }
 
     private void updateFireWeapon()
     {
-        setNextState((int)BossTurretState.WANDER, fireWeaponDuration);
+        setNextState((int)State.WANDER, fireWeaponDuration);
 
         enemyWalk.state = EnemyWalk.State.IDLE;
         isAttacking = true; //Just for animation

@@ -31,14 +31,14 @@ public class Enemy : MonoBehaviour, IDamageable, ISpawnable
             currentState = nextState;
 	}
 
-    protected void setCurrentState(int state)
+    public void setCurrentState(int state)
     {
         currentState = state;
         nextState = state;
         nextStateTime = float.MaxValue;
     }
 
-    protected void setNextState(int state, float delay, bool forceUpdate = false)
+    public void setNextState(int state, float delay, bool forceUpdate = false)
     {
         if (nextState != state || forceUpdate)
         {

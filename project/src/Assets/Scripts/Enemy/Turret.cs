@@ -4,13 +4,12 @@ using System.Collections.Generic;
 
 public class Turret : Enemy
 {
+    public enum State { WANDER, ATTACK, PROJECTILE }
 
     [Header("Turret Parameters")]
 
-
     // Public parameters
     public float attackAngleLimit = 10.0f; //Fire our weapon if we are facing our target within n degrees
-    public float frictionCoefficient = 0.2f; //Apply friction when Turret is shot as a projectile from TurretCannon
 
     // Private references
     private EnemyHead head;
@@ -22,7 +21,7 @@ public class Turret : Enemy
     //For Animation States
     private bool isAttacking;
 
-    public Vector3 velocity;
+    public Vector3 Velocity;
 
     // Use this for initialization
     protected override void Start()
@@ -43,36 +42,73 @@ public class Turret : Enemy
         //Set our head to search
         List<GameObject> heroList = GameControl.control.level.GetHeroList();
         head.SearchForTargets(heroList);
-
-        //Set our inital walk state
-        enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
     }
 
     // Update is called once per frame
     protected override void Update()
     {
+        Velocity = rigidBody.velocity;
+
         base.Update();
 
-        isAttacking = false;
-
-        if (head.state == EnemyHead.State.LOCKED)
+        switch (currentState)
         {
-            enemyWalk.lookAtTarget = head.lookAtTarget;
-            enemyWalk.state = EnemyWalk.State.FOLLOW_TARGET;
-            isAttacking = true;
-            attack();
-        }
-        else if (head.state == EnemyHead.State.SEARCHING)
-        {
-            enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
-        }
+            case (int)State.WANDER:
+                updateWander();
+                break;
 
-        applyFriction();
+            case (int)State.PROJECTILE:
+                updateProjectile();
+                break;
 
+            case (int)State.ATTACK:
+                updateAttack();
+                break;
+
+        }
         updateAnimationStates();
     }
 
-    private void attack()
+    private void updateWander()
+    {
+        isAttacking = false;
+        enemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
+
+        if (head.state == EnemyHead.State.LOCKED)
+        {
+            setCurrentState((int)State.ATTACK);
+        }
+    }
+
+    private void updateProjectile()
+    {
+        isAttacking = false;
+        enemyWalk.state = EnemyWalk.State.DISABLE_NAVMESH;
+
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(this.transform.position, out hit, 0.5f, 1))
+        {
+            rigidBody.velocity = Vector3.zero;
+            setCurrentState((int)State.WANDER);
+        }
+    }
+
+    private void updateAttack()
+    {
+        if (head.state == EnemyHead.State.SEARCHING)
+        {
+            setCurrentState((int)State.WANDER);
+        }
+        else
+        {
+            isAttacking = true;
+            enemyWalk.lookAtTarget = head.lookAtTarget;
+            enemyWalk.state = EnemyWalk.State.FOLLOW_TARGET;
+            fireWeapon();
+        }
+    }
+
+    private void fireWeapon()
     {
         if (weapon == null) return;
 
@@ -81,13 +117,6 @@ public class Turret : Enemy
         {
             weapon.Fire();
         }
-    }
-
-    private void applyFriction()
-    {
-        rigidBody.velocity *= (1 - (frictionCoefficient * Time.deltaTime));
-        if (rigidBody.velocity.magnitude <= 0.5f)
-            rigidBody.velocity = Vector3.zero;
     }
 
     private void updateAnimationStates()

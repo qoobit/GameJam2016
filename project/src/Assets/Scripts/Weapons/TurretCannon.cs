@@ -53,20 +53,19 @@ public class TurretCannon : Weapon
 
     private void createProjectile(Vector3 position, Quaternion rotation, Vector3 direction)
     {
-        GameObject turret = GameControl.Spawn(Spawnable.Type.ENEMY_TURRET, position, rotation);
-        turret.name = "Boss Turret Minion";
-        turret.layer = this.transform.parent.gameObject.layer;
-        
-        Rigidbody rigidBody = turret.GetComponent<Rigidbody>();
+        GameObject turretGameObj = GameControl.Spawn(Spawnable.Type.ENEMY_TURRET, position, rotation);
+        turretGameObj.name = "Boss Turret Minion";
+        turretGameObj.layer = this.transform.parent.gameObject.layer;
+
+        Turret turret = turretGameObj.GetComponent<Turret>();
+        turret.setCurrentState((int)Turret.State.PROJECTILE);
+
+        Rigidbody rigidBody = turretGameObj.GetComponent<Rigidbody>();
         rigidBody.velocity = direction * bulletSpeed;
 
-        EnemyWalk turretEnemyWalk = turret.GetComponent<EnemyWalk>();
-        turretEnemyWalk.state = EnemyWalk.State.WAYPOINT_RANDOM;
+        EnemyWalk turretEnemyWalk = turretGameObj.GetComponent<EnemyWalk>();
+        turretEnemyWalk.state = EnemyWalk.State.IDLE;
         turretEnemyWalk.waypointCollection = waypointCollection;
-
-        EnemyHead turretHead = turret.GetComponent<EnemyHead>();
-        List<GameObject> heroList = GameControl.control.level.GetHeroList();
-        turretHead.SearchForTargets(heroList);
     }
 
     public void fireSingle()

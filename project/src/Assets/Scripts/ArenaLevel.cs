@@ -6,8 +6,9 @@ public class ArenaLevel : Level
 {
     private enum State { WARMUP, SPAWNBOSS, BOSSFIGHT, BOSSDEFEATED }
 
+    public List<GameObject> turretList;
+
     private State state;
-    private List<GameObject> turretList;
     private GameObject boss;
     private GameObject portalEntry;
     private GameObject portalExit;
@@ -37,6 +38,8 @@ public class ArenaLevel : Level
     // Update is called once per frame
     override protected void Update()
     {
+        base.Update();
+
         switch (state)
         {
             case State.WARMUP:
@@ -55,6 +58,19 @@ public class ArenaLevel : Level
                 updateBossDefeatedState();
                 break;
         }
+    }
+
+    override protected void listCleanup()
+    {
+        base.listCleanup();
+
+        List<GameObject> newTurretList = new List<GameObject>();
+        for (int i = 0; i < turretList.Count; i++)
+        {
+            if (turretList[i] != null)
+                newTurretList.Add(turretList[i]);
+        }
+        turretList = newTurretList;
     }
 
     private void updateWarmupState()
