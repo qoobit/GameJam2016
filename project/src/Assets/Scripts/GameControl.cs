@@ -18,7 +18,7 @@ public class GameControl : MonoBehaviour {
     public static GameControl control;
     public Level level;
 
-    private bool enableMultiDisplay = true;
+    private bool enableMultiDisplay = false;
     private int displayCount = 1;
 
     void Awake()

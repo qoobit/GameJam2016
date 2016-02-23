@@ -2,9 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public enum DamageState { HEALTHY, STUNNED, DEAD };
 
-public class Hero : MonoBehaviour, IDamageable {
+public class Hero : StateEntity, IDamageable
+{
+    public enum DamageState { HEALTHY, STUNNED, DEAD };
+
     public float hp;
     public Vector3 hmdForward;
 
@@ -13,7 +15,7 @@ public class Hero : MonoBehaviour, IDamageable {
 
     
     public GameObject hmdRig;
-    public GameObject Weapon;
+    public GameObject weapon;
     public GameObject Crosshair;
     public GameObject wall;
     public GameObject platform;
@@ -95,7 +97,10 @@ public class Hero : MonoBehaviour, IDamageable {
     public bool IsScaling() { return scaling; }
 
     // Use this for initialization
-    void Start () {
+    override protected void Start()
+    {
+        base.Start();
+
         jumpDash = 0;
         dashForce = 30f;
         jumpForce = 45f;
@@ -113,17 +118,12 @@ public class Hero : MonoBehaviour, IDamageable {
         animator = GetComponent<Animator>();
         jumpAllowed = dashAllowed = false;
         firstLock = false;
-                
+
         //Load a blaster as our weapon
-        Object blasterObject = Resources.Load("Weapons/Fist Blaster", typeof(GameObject));
-        //GameObject blasterWeapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, this.transform.rotation) as GameObject;
-        Weapon = GameObject.Instantiate(blasterObject, gameObject.transform.position, this.transform.rotation) as GameObject;
-        Weapon.name = "Fist Blaster";
-        Weapon.transform.parent = this.transform;
-        Weapon.transform.localPosition = new Vector3(Weapon.transform.localPosition.x, Weapon.transform.localPosition.y + 2f, Weapon.transform.localPosition.z);
-        //blasterWeapon.transform.parent = this.transform;
-        //blasterWeapon.transform.localPosition = new Vector3(blasterWeapon.transform.localPosition.x, blasterWeapon.transform.localPosition.y + 2f, blasterWeapon.transform.localPosition.z);
-        //weapon = blasterWeapon.GetComponent<Weapon>();
+        weapon = GameControl.Spawn(Spawnable.Type.WEAPON_FIST_BLASTER, this.transform.position, this.transform.rotation);
+        weapon.name = "Fist Blaster";
+        weapon.transform.parent = this.transform;
+        weapon.transform.localPosition = new Vector3(weapon.transform.localPosition.x, weapon.transform.localPosition.y + 2f, weapon.transform.localPosition.z);
         
         //initialize hero with GameControl
         health.value = GameControl.control.health;
@@ -313,15 +313,17 @@ public class Hero : MonoBehaviour, IDamageable {
     }
 
     // Update is called once per frame
-    void Update() {
+    override protected void Update()
+    {
+        base.Update();
 
         GetComponent<CharacterController>().Move(velocity * Time.deltaTime);
 
         //Debug.Log(GameObject.Find("Focal").transform.localPosition+" "+ GameObject.Find("Focal").transform.position);
 
-        ((FistBlaster)Weapon.GetComponent<Weapon>()).bulletReloadTime = 0.01f;
-        ((FistBlaster)Weapon.GetComponent<Weapon>()).clipReloadTime = 0f;
-        Weapon.GetComponent<Weapon>().weaponFireMode = (int)BlasterMode.STRAIGHT;
+        ((FistBlaster)weapon.GetComponent<Weapon>()).bulletReloadTime = 0.01f;
+        ((FistBlaster)weapon.GetComponent<Weapon>()).clipReloadTime = 0f;
+        weapon.GetComponent<Weapon>().weaponFireMode = (int)BlasterMode.STRAIGHT;
 
         //update viewers
 
@@ -867,11 +869,11 @@ public class Hero : MonoBehaviour, IDamageable {
                 }
                 else
                 {
-                    if (Weapon.GetComponent<Weapon>() != null)
+                    if (weapon.GetComponent<Weapon>() != null)
                     {
                         shooting = true;
                         ShotAudio.Play();
-                        Weapon.GetComponent<Weapon>().Fire();
+                        weapon.GetComponent<Weapon>().Fire();
                     }
                 }
 

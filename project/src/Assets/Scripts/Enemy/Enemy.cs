@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Enemy : MonoBehaviour, IDamageable, ISpawnable
+public class Enemy : StateEntity, IDamageable, ISpawnable
 {
     [Header("Enemy Status")]
     public float hp = 100f;
@@ -11,45 +11,24 @@ public class Enemy : MonoBehaviour, IDamageable, ISpawnable
     public Guage guage;
     protected Object explosionObject;
     protected Weapon weapon;
-
-    public int currentState = 0;
-    public int nextState = 0;
-    public float nextStateTime = float.MaxValue;
-
     
-    protected virtual void Start ()
+    override protected void Start()
     {
+        base.Start();
         guage = new Guage();
         explosionObject = Resources.Load("Explosion", typeof(GameObject));
     }
 
 
-    protected virtual void Update () {
+    override protected void Update()
+    {
+        base.Update();
+
         hp = guage.value;
-
-        if (Time.time >= nextStateTime)
-            currentState = nextState;
 	}
-
-    public void setCurrentState(int state)
-    {
-        currentState = state;
-        nextState = state;
-        nextStateTime = float.MaxValue;
-    }
-
-    public void setNextState(int state, float delay, bool forceUpdate = false)
-    {
-        if (nextState != state || forceUpdate)
-        {
-            nextState = state;
-            nextStateTime = Time.time + delay;
-        }
-    }
 
     protected virtual void OnCollisionEnter(Collision collision)
     {
-        
         if (baseDamage == 0) return;
 
         IDamageable damageable = collision.gameObject.GetComponent<IDamageable>();

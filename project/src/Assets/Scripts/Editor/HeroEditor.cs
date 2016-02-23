@@ -27,7 +27,7 @@ public class HeroEditor : Editor
         myTarget.velocity = EditorGUILayout.Vector3Field("Velocity", myTarget.velocity);
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Inventory", EditorStyles.boldLabel);
-        myTarget.Weapon = (GameObject)EditorGUILayout.ObjectField("Weapon", myTarget.Weapon, typeof(GameObject));
+        myTarget.weapon = (GameObject)EditorGUILayout.ObjectField("Weapon", myTarget.weapon, typeof(GameObject));
 
         EditorGUILayout.Space();
 

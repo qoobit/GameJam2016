@@ -17,6 +17,7 @@ public class Spawnable
         PROJECTILE,
         ENEMY_TURRET,
         WEAPON_BLASTER,
+        WEAPON_FIST_BLASTER,
         WEAPON_TURRET_CANNON
     };
 
@@ -25,13 +26,12 @@ public class Spawnable
         switch (type)
         {
             case Type.BOSS_TURRET: return "Enemies/BossTurret";
-            case Type.ENEMY_TURRET:
-                return "Enemies/Turret";
-
+            case Type.ENEMY_TURRET: return "Enemies/Turret";
             case Type.HERO: return "Hero";
             case Type.PORTAL: return "Portal";
             case Type.PROJECTILE: return "Projectile";
             case Type.WEAPON_BLASTER: return "Weapons/Blaster";
+            case Type.WEAPON_FIST_BLASTER: return "Weapons/FistBlaster";
             case Type.WEAPON_TURRET_CANNON: return "Weapons/TurretCannon";
 
             default:
