@@ -26,7 +26,6 @@ public class Hero : StateEntity, IDamageable
 
     public GameObject Root;
     public float gravity;
-    Animator animator;
 
     bool dashing;
     bool jumping;
@@ -38,21 +37,8 @@ public class Hero : StateEntity, IDamageable
     bool grabbing;
     bool lifting;
 
-    AudioSource JumpAudio;
-    AudioSource ShotAudio;
-    AudioSource WalkAudio;
-    AudioSource DashAudio;
-    AudioSource LockAudio;
-    AudioSource DeathAudio;
 
     public GameObject Focal;
-
-    public AudioClip JumpAudioClip;
-    public AudioClip ShotAudioClip;
-    public AudioClip WalkAudioClip;
-    public AudioClip DashAudioClip;
-    public AudioClip DeathAudioClip;
-    public AudioClip LockAudioClip;
     
 
     float walkAge = 0f;
@@ -79,7 +65,7 @@ public class Hero : StateEntity, IDamageable
     Vector3 wallNormal;
     public Vector3 velocity = Vector3.zero;
 
-    public Guage health;
+    protected Guage health;
     
 
     bool lockToTarget;
@@ -87,14 +73,29 @@ public class Hero : StateEntity, IDamageable
 
     GameObject lockedObject;
 
-    public bool IsStanding() { return standing; }
-    public bool IsDashing(){return dashing;}
-    public bool IsShooting() { return shooting; }
-    public bool IsJumping() { return jumping; }
-    public bool IsGrabbing() { return grabbing; }
-    public bool IsLifting() { return lifting; }
-    public bool IsCharging() { return charging; }
-    public bool IsScaling() { return scaling; }
+    public bool IsStanding { get { return standing; } }
+    public bool IsDashing { get { return dashing; } }
+    public bool IsShooting { get { return shooting; } }
+    public bool IsJumping { get { return jumping; } }
+    public bool IsGrabbing { get { return grabbing; } }
+    public bool IsLifting { get { return lifting; } }
+    public bool IsCharging { get { return charging; } }
+    public bool IsScaling { get { return scaling; } }
+    public float Speed { get { return speed; } }
+    public float Health
+    {
+        get
+        {
+            return (health == null ? 0f : health.value);
+        }
+        set
+        {
+            if (health == null) return;
+            health.value = value;
+        }
+    }
+
+    private HeroAudio heroAudio;
 
     // Use this for initialization
     override protected void Start()
@@ -115,7 +116,6 @@ public class Hero : StateEntity, IDamageable
         health = new Guage();
         
         spawnPoint = gameObject.transform.position;
-        animator = GetComponent<Animator>();
         jumpAllowed = dashAllowed = false;
         firstLock = false;
 
@@ -128,19 +128,8 @@ public class Hero : StateEntity, IDamageable
         //initialize hero with GameControl
         health.value = GameControl.control.health;
 
-        JumpAudio = gameObject.AddComponent<AudioSource>();
-        JumpAudio.clip = JumpAudioClip;
-        ShotAudio = gameObject.AddComponent<AudioSource>();
-        ShotAudio.clip = ShotAudioClip;
-        WalkAudio = gameObject.AddComponent<AudioSource>();
-        WalkAudio.clip = WalkAudioClip;
-        DashAudio = gameObject.AddComponent<AudioSource>();
-        DashAudio.clip = DashAudioClip;
-        LockAudio = gameObject.AddComponent<AudioSource>();
-        LockAudio.clip = LockAudioClip;
-        DeathAudio = gameObject.AddComponent<AudioSource>();
-        DeathAudio.clip = DeathAudioClip;
-        
+        //References
+        heroAudio = GetComponent<HeroAudio>();
     }
 
    
@@ -301,17 +290,6 @@ public class Hero : StateEntity, IDamageable
         }
     }
 
-    void UpdateAnimator()
-    {
-        animator.SetBool("dashing", dashing);
-        animator.SetBool("standing", standing);
-        animator.SetBool("jumping", jumping);
-        animator.SetBool("shooting", shooting);
-        animator.SetBool("scaling", scaling);
-        animator.SetFloat("health", health.value);
-        animator.SetFloat("speed", speed);
-    }
-
     // Update is called once per frame
     override protected void Update()
     {
@@ -385,10 +363,7 @@ public class Hero : StateEntity, IDamageable
         if (damageState != DamageState.DEAD)
         {
             applyInputsToCharacter();
-        }
-
-        UpdateAnimator();
-        
+        }       
         
 
         //facing vector
@@ -429,7 +404,7 @@ public class Hero : StateEntity, IDamageable
             lockedObject = hmdRig.GetComponent<QoobitOVR>().FocusObject;
             if (!firstLock)
             {
-                LockAudio.Play();
+                heroAudio.Play(HeroAudio.Clip.LOCK);
                 firstLock = true;
             }
         }
@@ -482,7 +457,7 @@ public class Hero : StateEntity, IDamageable
     {
         if (damageState == DamageState.DEAD) return;
 
-        DeathAudio.Play();
+        heroAudio.Play(HeroAudio.Clip.DEATH);
         damageState = DamageState.DEAD;
         GameControl.control.lives--;
         /*
@@ -558,7 +533,7 @@ public class Hero : StateEntity, IDamageable
             
             if (walkAge <= 0f)
             {
-                WalkAudio.Play();
+                heroAudio.Play(HeroAudio.Clip.WALK);
             }
             walkAge += Time.deltaTime;
             
@@ -577,10 +552,6 @@ public class Hero : StateEntity, IDamageable
             {
                 facing = wallNormal;
             }
-
-            
-
-            
         }
         else
         {
@@ -588,7 +559,7 @@ public class Hero : StateEntity, IDamageable
             velocity.z = 0f;
             scaling = false;
             wall = null;
-            WalkAudio.Stop();
+            heroAudio.Stop(HeroAudio.Clip.WALK);
  
         }
       
@@ -632,7 +603,7 @@ public class Hero : StateEntity, IDamageable
             {
                 
                 dashing = true;
-                DashAudio.Play();
+                heroAudio.Play(HeroAudio.Clip.DASH);
                 if (!GetComponent<CharacterController>().isGrounded)
                 {
                     jumpAllowed = false;
@@ -745,8 +716,8 @@ public class Hero : StateEntity, IDamageable
             //Debug.Log(GetComponent<CharacterController>().isGrounded+" "+jumping+" "+jumpAllowed);
             if (!jumping&&jumpAllowed)
             {
-                
-                JumpAudio.Play();
+
+                heroAudio.Play(HeroAudio.Clip.JUMP);
                 
                 jumpAllowed = false;
                 standing = false;
@@ -872,7 +843,7 @@ public class Hero : StateEntity, IDamageable
                     if (weapon.GetComponent<Weapon>() != null)
                     {
                         shooting = true;
-                        ShotAudio.Play();
+                        heroAudio.Play(HeroAudio.Clip.JUMP);
                         weapon.GetComponent<Weapon>().Fire();
                     }
                 }

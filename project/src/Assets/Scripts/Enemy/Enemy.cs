@@ -57,7 +57,7 @@ public class Enemy : StateEntity, IDamageable, ISpawnable
         
         if (guage.value <= 0f)
         {
-            if (attacker.name == "Hero" && (attacker.GetComponent<Hero>().IsDashing()))
+            if (attacker.name == "Hero" && (attacker.GetComponent<Hero>().IsDashing))
             {
                 Explode();
             }
