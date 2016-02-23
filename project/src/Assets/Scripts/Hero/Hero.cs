@@ -65,7 +65,7 @@ public class Hero : StateEntity, IDamageable
     Vector3 wallNormal;
     public Vector3 velocity = Vector3.zero;
 
-    protected Guage health;
+    public Guage health;
     
 
     bool lockToTarget;
@@ -843,7 +843,7 @@ public class Hero : StateEntity, IDamageable
                     if (weapon.GetComponent<Weapon>() != null)
                     {
                         shooting = true;
-                        heroAudio.Play(HeroAudio.Clip.JUMP);
+                        heroAudio.Play(HeroAudio.Clip.SHOT);
                         weapon.GetComponent<Weapon>().Fire();
                     }
                 }
