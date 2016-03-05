@@ -5,15 +5,26 @@ using System.Collections.Generic;
 
 public class Hero : StateEntity, IDamageable
 {
-    public enum DamageState { HEALTHY, STUNNED, DEAD };
-
-    public float hp;
-    public Vector3 hmdForward;
-
-    public Vector3 facing;
-    public DamageState damageState = DamageState.HEALTHY;
 
     
+    public enum DamageState { HEALTHY, STUNNED, DEAD };
+
+    
+    #region Status
+    public Vector3 facing;
+    public float hp;
+    public Vector3 hmdForward;
+    public DamageState damageState = DamageState.HEALTHY;
+
+    public Guage health;
+    public Vector3 velocity = Vector3.zero;
+
+    bool lockToTarget;
+    bool firstLock;
+
+    public GameObject lockedObject;
+    #endregion
+    #region Public Game Objects
     public GameObject hmdRig;
     public GameObject weapon;
     public GameObject Crosshair;
@@ -24,8 +35,22 @@ public class Hero : StateEntity, IDamageable
     public GameObject LiftingReference;
     public GameObject TouchingGameObject;
 
-    public GameObject Root;
-    public float gravity;
+    public GameObject Root;             //root game object of meshes
+    public GameObject Focal;
+
+
+    public float jumpForce = 20f;
+    public float dashForce;
+
+    Vector3 spawnPoint;
+    Vector3 wallNormal;
+
+    #endregion
+    #region Gizmos
+    public Color GizmosFacingColor = Color.green;
+    public float GizmosFacingLength = 5f;
+    #endregion
+    #region State Flags
 
     bool dashing;
     bool jumping;
@@ -37,13 +62,15 @@ public class Hero : StateEntity, IDamageable
     bool grabbing;
     bool lifting;
 
+    #endregion
 
-    public GameObject Focal;
-    
 
+    #region Limits
+    public float gravity = -200f;
+    public float terminalVelocity = 15f;
     float walkAge = 0f;
     float walkDuration = 0.3f;
-    float dashForce;
+    
     float dashDuration = 0.5f;
     float dashAge = 0f;
     bool dashAllowed;
@@ -57,21 +84,13 @@ public class Hero : StateEntity, IDamageable
 
     float jumpAge = 0f;
     float jumpDuration = 0.25f;
-    float jumpForce;
+    
     float speed;
     float speedScale;
-    Vector3 spawnPoint;
 
-    Vector3 wallNormal;
-    public Vector3 velocity = Vector3.zero;
+    #endregion
 
-    public Guage health;
-    
-
-    bool lockToTarget;
-    bool firstLock;
-
-    GameObject lockedObject;
+    private HeroAudio heroAudio;
 
     public bool IsStanding { get { return standing; } }
     public bool IsDashing { get { return dashing; } }
@@ -94,21 +113,19 @@ public class Hero : StateEntity, IDamageable
             health.value = value;
         }
     }
-
-    private HeroAudio heroAudio;
-
-    // Use this for initialization
+    
     override protected void Start()
     {
         base.Start();
 
-        jumpDash = 0;
-        dashForce = 30f;
-        jumpForce = 45f;
-
         dashing = charging = jumping = shooting = scaling = standing = false;
-        jumpHold = 0;
         lockToTarget = false;
+
+        jumpDash = 0;
+        dashForce = 20f;
+        gravity = -200f;
+        jumpHold = 0;
+        
         
         speedScale = 20f;
 
@@ -130,9 +147,11 @@ public class Hero : StateEntity, IDamageable
 
         //References
         heroAudio = GetComponent<HeroAudio>();
+
+        hmdRig.GetComponent<QoobitOVR>().FollowObject = this.gameObject;
     }
 
-   
+    #region Collision Detection
     void OnTriggerExit(Collider other)
     {
         if (GameControl.control.level == null) return;
@@ -183,25 +202,15 @@ public class Hero : StateEntity, IDamageable
     void OnCollisionStay(Collision col)
     {
         if (GameControl.control.level == null) return;
-       
-
     }
     
-
-    
-
     void OnCollisionEnter(Collision collision)
     {
-        
         if (GameControl.control.level == null) return;
-
-       
     }
     void OnCollisionExit(Collision collision)
     {
-        
         if (GameControl.control.level == null) return;
-        
     }
 
     void OnControllerColliderHit(ControllerColliderHit col)
@@ -227,7 +236,7 @@ public class Hero : StateEntity, IDamageable
         else if (col.gameObject.tag == "Wall")
         {
             wall = col.gameObject;
-            scaling = true;
+            if(!standing) scaling = true;
             dashAllowed = true;
             jumpDash = 0;
             jumpAllowed = true;
@@ -240,11 +249,11 @@ public class Hero : StateEntity, IDamageable
             scaling = false;
             
         }
-
-        
-        
     }
+    #endregion
 
+
+    #region Helper Functions
     void SetSkinnedMeshRendererEnabled(GameObject go, bool enabled)
     {
         if (go.GetComponent<SkinnedMeshRenderer>() != null)
@@ -289,6 +298,7 @@ public class Hero : StateEntity, IDamageable
             SetSkinnedMeshRendererColor(child.gameObject, c);
         }
     }
+    #endregion
 
     // Update is called once per frame
     override protected void Update()
@@ -309,8 +319,7 @@ public class Hero : StateEntity, IDamageable
         hmdForward.y = 0f;
         hmdForward.Normalize();
 
-        gravity = -50f;
-        //gravity -= 9.81f * Time.deltaTime;
+        
 
 
         //Debug.Log(GetComponent<CharacterController>().isGrounded);
@@ -345,8 +354,11 @@ public class Hero : StateEntity, IDamageable
                 velocity.y = 0f;
             }
         }
-        
-        
+
+        if (velocity.y < -terminalVelocity) velocity.y = -terminalVelocity;
+        if (velocity.y > terminalVelocity) velocity.y = terminalVelocity;
+
+
 
         //blink stunned hero
         if (damageState == DamageState.STUNNED)
@@ -364,11 +376,8 @@ public class Hero : StateEntity, IDamageable
         {
             applyInputsToCharacter();
         }       
-        
-
-        //facing vector
-        Debug.DrawLine(gameObject.transform.position, gameObject.transform.position + (facing * 100f), Color.green);
     }
+
     public void UpdateTransform()
     {
         
@@ -377,21 +386,19 @@ public class Hero : StateEntity, IDamageable
 
         transform.localEulerAngles = new Vector3(0, facingAngle, 0);
     }
-    public void RealignHMD()
-    {
-        Vector3 position = gameObject.transform.position - (facing * 10f);
-        position += new Vector3(0, 10f, 0f);         
-        hmdRig.GetComponent<QoobitOVR>().Realign(position,Focal.transform);
-    }
+
+
+    //realign HMD to behind the hero
+    
     
     void FocusTarget()
     {
         Vector3 directionToTarget = Vector3.zero;
-
+        /*
         LayerMask layerMask = new LayerMask();
         layerMask = (1 << LayerMask.NameToLayer("Targets"));
         layerMask |= (1 << LayerMask.NameToLayer("Enemy"));
-
+        */
         Crosshair.SetActive(false);
 
         if (hmdRig.GetComponent<QoobitOVR>().Discovered())
@@ -434,8 +441,6 @@ public class Hero : StateEntity, IDamageable
 
     public void Hurt(float damage, GameObject attacker)
     {
-
-        
         //Don't take damage if we are stunned
         if (stunAge > 0f) return;
     
@@ -456,7 +461,7 @@ public class Hero : StateEntity, IDamageable
     public void Die()
     {
         if (damageState == DamageState.DEAD) return;
-
+        velocity.x = velocity.z = 0f;
         heroAudio.Play(HeroAudio.Clip.DEATH);
         damageState = DamageState.DEAD;
         GameControl.control.lives--;
@@ -483,8 +488,8 @@ public class Hero : StateEntity, IDamageable
         health.value = 100f;
         damageState = DamageState.STUNNED;
         stunAge = stunCooldown;
-        RealignHMD();
-        
+        hmdRig.GetComponent<QoobitOVR>().Realign(gameObject.transform.position,facing);
+
     }
 
 
@@ -510,9 +515,10 @@ public class Hero : StateEntity, IDamageable
 
     private void moveCharacter(float theta)
     {
+        
 
         //controller movement
-        Vector3 movement = new Vector3(-Input.GetAxisRaw("LeftJoystickX"), 0, Input.GetAxisRaw("LeftJoystickY"));
+        Vector3 movement = new Vector3(-InputDeviceController.control.HorizontalAxis, 0, InputDeviceController.control.VerticalAxis);
         Vector3 movementUnit = movement.normalized;
         //recalibrate relative to joystick
         movementUnit = Quaternion.Euler(0, 180, 0) * movementUnit;
@@ -645,7 +651,6 @@ public class Hero : StateEntity, IDamageable
             }
             else
             {
-                Debug.Log("AA");
                 
                 if (lockedObject != null)
                 {
@@ -656,7 +661,7 @@ public class Hero : StateEntity, IDamageable
 
                 }
                 else {
-                    Debug.Log("BB");
+                    
                     //move towards facing direction
                     if (scaling&&!dashing)
                     {
@@ -668,12 +673,17 @@ public class Hero : StateEntity, IDamageable
                     }
                     
                 }
-                
-                if(GetComponent<CharacterController>().isGrounded||(!GetComponent<CharacterController>().isGrounded&&airDashAllowed)) GetComponent<CharacterController>().Move(dashDirection * dashForce * Time.deltaTime);
+
+                if (GetComponent<CharacterController>().isGrounded 
+                    || (!GetComponent<CharacterController>().isGrounded && airDashAllowed))
+                {
+                    //GetComponent<CharacterController>().Move(dashDirection * dashForce * Time.deltaTime);
+                    velocity += dashDirection * dashForce;
+                }
       
             }
 
-            Debug.Log(dashDirection+ " "+scaling + " "+(wall== null)+" "+(dashAge<dashDuration));
+            //Debug.Log(dashDirection+ " "+scaling + " "+(wall== null)+" "+(dashAge<dashDuration));
         }
         if (Input.GetButtonUp("B"))
         {
@@ -711,12 +721,11 @@ public class Hero : StateEntity, IDamageable
     private void doCharacterJump()
     {
         
-        if (Input.GetButtonDown("A"))
+        if (InputDeviceController.control.IsAPressed())
         {
             //Debug.Log(GetComponent<CharacterController>().isGrounded+" "+jumping+" "+jumpAllowed);
             if (!jumping&&jumpAllowed)
             {
-
                 heroAudio.Play(HeroAudio.Clip.JUMP);
                 
                 jumpAllowed = false;
@@ -726,21 +735,22 @@ public class Hero : StateEntity, IDamageable
                 spawnPoint = gameObject.transform.position;
             }
         }
-        else if (Input.GetButton("A"))
+        else if (InputDeviceController.control.A)
         {
             if (jumping)
             {
                 jumpAllowed = false;
                 jumpAge += Time.deltaTime;
 
-                GetComponent<CharacterController>().Move(new Vector3(0, jumpForce * Time.deltaTime, 0));
+                //GetComponent<CharacterController>().Move(new Vector3(0, jumpForce * Time.deltaTime, 0));
+                velocity.y += jumpForce;
                 if (jumpAge >= jumpDuration)
                 {
                     jumping = false;
                 }
             }
         }
-        else if (Input.GetButtonUp("A"))
+        else if (InputDeviceController.control.IsAReleased())
         {
             if(jumping) stopJump();
         }
@@ -803,7 +813,7 @@ public class Hero : StateEntity, IDamageable
     
     private void doCharacterMainAction()
     {
-        if (Input.GetButtonDown("X"))
+        if (InputDeviceController.control.IsXPressed())
         {
             if (damageState == DamageState.DEAD) return;
 
@@ -831,8 +841,6 @@ public class Hero : StateEntity, IDamageable
             }
             else
             {
-                
-                
                 if (LiftingGameObject != null)
                 {
                     //throw if lifting something
@@ -851,14 +859,14 @@ public class Hero : StateEntity, IDamageable
 
             }
         }
-        else if (Input.GetButton("X"))
+        else if (InputDeviceController.control.X)
         {
             if (!grabbing && !lifting) {
                 charging = true;
             }
             
         }
-        else if (Input.GetButtonUp("X"))
+        else if (InputDeviceController.control.IsXReleased())
         {
             shooting = false;
             charging = false;
@@ -875,8 +883,7 @@ public class Hero : StateEntity, IDamageable
     {
         if (Input.GetButtonDown("RB"))
         {
-
-            RealignHMD();
+            hmdRig.GetComponent<QoobitOVR>().Realign(gameObject.transform.position,facing);
         }
         
     }

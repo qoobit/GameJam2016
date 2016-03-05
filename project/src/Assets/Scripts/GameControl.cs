@@ -21,6 +21,8 @@ public class GameControl : MonoBehaviour {
     private bool enableMultiDisplay = false;
     private int displayCount = 1;
 
+    private bool lastSfxOn = false;
+
     void Awake()
     {
         if (control == null)
@@ -48,8 +50,7 @@ public class GameControl : MonoBehaviour {
         health = 100f;
         dash = false;
         shoot = false;
-
-
+        
         Load();
 
         createMultiDisplayCameras();
@@ -57,7 +58,18 @@ public class GameControl : MonoBehaviour {
 
     // Update is called once per frame
     void Update () {
+
+        if (SfxOn != lastSfxOn)
+        {
+
+        }
+
         
+        if (MusicOn) level.SetBGMVolume(1f);
+        else level.SetBGMVolume(0f);
+        
+        
+        lastSfxOn = SfxOn;
     }
 
     public void Load()
@@ -80,6 +92,8 @@ public class GameControl : MonoBehaviour {
             health = data.health;
             shoot = data.shoot;
             dash = data.dash;
+
+            //portalName = "Portal Entry";
         }
     }
 

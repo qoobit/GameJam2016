@@ -22,17 +22,11 @@ public class HeroAudio : MonoBehaviour
     void Start()
     {
         JumpAudio = gameObject.AddComponent<AudioSource>();
-        JumpAudio.clip = JumpAudioClip;
         ShotAudio = gameObject.AddComponent<AudioSource>();
-        ShotAudio.clip = ShotAudioClip;
         WalkAudio = gameObject.AddComponent<AudioSource>();
-        WalkAudio.clip = WalkAudioClip;
         DashAudio = gameObject.AddComponent<AudioSource>();
-        DashAudio.clip = DashAudioClip;
         LockAudio = gameObject.AddComponent<AudioSource>();
-        LockAudio.clip = LockAudioClip;
         DeathAudio = gameObject.AddComponent<AudioSource>();
-        DeathAudio.clip = DeathAudioClip;
     }
 
     void Update()
@@ -42,25 +36,27 @@ public class HeroAudio : MonoBehaviour
 
     public void Play(Clip clip)
     {
+        if (!GameControl.control.SfxOn) return;
+
         switch (clip)
         {
             case Clip.JUMP:
-                JumpAudio.Play();
+                JumpAudio.PlayOneShot(JumpAudioClip);
                 break;
             case Clip.SHOT:
-                ShotAudio.Play();
+                ShotAudio.PlayOneShot(ShotAudioClip);
                 break;
             case Clip.WALK:
-                WalkAudio.Play();
+                WalkAudio.PlayOneShot(WalkAudioClip);
                 break;
             case Clip.DASH:
-                DashAudio.Play();
+                DashAudio.PlayOneShot(DashAudioClip);
                 break;
             case Clip.LOCK:
-                LockAudio.Play();
+                LockAudio.PlayOneShot(LockAudioClip);
                 break;
             case Clip.DEATH:
-                DeathAudio.Play();
+                DeathAudio.PlayOneShot(DeathAudioClip);
                 break;
         }
     }
@@ -88,5 +84,16 @@ public class HeroAudio : MonoBehaviour
                 DeathAudio.Stop();
                 break;
         }
+    }
+
+    public void StopAll()
+    {
+        JumpAudio.Stop();
+        ShotAudio.Stop();
+        WalkAudio.Stop();
+        DashAudio.Stop();
+        LockAudio.Stop();
+        DeathAudio.Stop();
+        
     }
 }

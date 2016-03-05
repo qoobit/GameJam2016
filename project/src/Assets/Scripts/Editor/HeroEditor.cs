@@ -5,9 +5,9 @@ using UnityEditor;
 [CustomEditor(typeof(Hero))]
 public class HeroEditor : Editor
 {
-    protected static bool showAudioClips = false;
-    protected static bool showStates = false;
-    protected static bool showGameObjects = true;
+    public static bool ShowStates = false;
+    public static bool ShowGameObjects = true;
+    public static bool ShowGizmos = true;
 
     public override void OnInspectorGUI()
     {
@@ -15,24 +15,28 @@ public class HeroEditor : Editor
         myFoldoutStyle.fontStyle = FontStyle.Bold;
         Hero myTarget = (Hero)target;
 
-        /*
-        myTarget.experience = EditorGUILayout.IntField("Experience", myTarget.experience);
-        EditorGUILayout.LabelField("Level", myTarget.Level.ToString());
-        */
         EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
         myTarget.Health = EditorGUILayout.FloatField("HP", myTarget.Health);
         myTarget.facing = EditorGUILayout.Vector3Field("Facing Direction", myTarget.facing);
         myTarget.platform = (GameObject)EditorGUILayout.ObjectField("Platform", myTarget.platform, typeof(GameObject), true);
         myTarget.wall = (GameObject)EditorGUILayout.ObjectField("Wall", myTarget.wall, typeof(GameObject), true);
+        myTarget.lockedObject = (GameObject)EditorGUILayout.ObjectField("Locked Object", myTarget.lockedObject, typeof(GameObject), true);
+        
         myTarget.velocity = EditorGUILayout.Vector3Field("Velocity", myTarget.velocity);
+        myTarget.terminalVelocity = EditorGUILayout.FloatField("Terminal Velocity", myTarget.terminalVelocity);
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Inventory", EditorStyles.boldLabel);
         myTarget.weapon = (GameObject)EditorGUILayout.ObjectField("Weapon", myTarget.weapon, typeof(GameObject), true);
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Forces", EditorStyles.boldLabel);
+        myTarget.gravity = EditorGUILayout.FloatField("Gravity", myTarget.gravity);
+        myTarget.jumpForce = EditorGUILayout.FloatField("Jump", myTarget.jumpForce);
+        myTarget.dashForce = EditorGUILayout.FloatField("Dash", myTarget.dashForce);
 
         EditorGUILayout.Space();
 
-        showGameObjects = EditorGUILayout.Foldout(showGameObjects, "Reference GameObjects", myFoldoutStyle);
-        if (showGameObjects)
+        ShowGameObjects = EditorGUILayout.Foldout(ShowGameObjects, "Reference GameObjects", myFoldoutStyle);
+        if (ShowGameObjects)
         {
 
             myTarget.Root = (GameObject)EditorGUILayout.ObjectField("Root", myTarget.Root, typeof(GameObject), true);
@@ -45,13 +49,13 @@ public class HeroEditor : Editor
             myTarget.GrabbingGameObject = (GameObject)EditorGUILayout.ObjectField("Grabbing", myTarget.GrabbingGameObject, typeof(GameObject), true);
         }
 
-        
 
+        EditorGUILayout.Space();
+       
 
-        
-
-        showStates = EditorGUILayout.Foldout(showStates, "States", myFoldoutStyle);
-        if (showStates) { 
+        ShowStates = EditorGUILayout.Foldout(ShowStates, "States", myFoldoutStyle);
+        if (ShowStates)
+        {
             EditorGUILayout.LabelField("Jumping", myTarget.IsJumping.ToString());
             EditorGUILayout.LabelField("Dashing", myTarget.IsDashing.ToString());
             EditorGUILayout.LabelField("Charging", myTarget.IsCharging.ToString());
@@ -64,8 +68,14 @@ public class HeroEditor : Editor
             EditorGUILayout.Space();
         }
 
-        
-        /* //Moved audio stuff to HeroAudio
+        ShowGizmos = EditorGUILayout.Foldout(ShowGizmos, "Gizmos", myFoldoutStyle);
+        if (ShowGizmos)
+        {
+            myTarget.GizmosFacingColor = EditorGUILayout.ColorField("Facing Color", myTarget.GizmosFacingColor);
+            myTarget.GizmosFacingLength = EditorGUILayout.FloatField("Facing Length", myTarget.GizmosFacingLength);
+        }
+        /* 
+        //Moved audio stuff to HeroAudio
         showAudioClips = EditorGUILayout.Foldout(showAudioClips, "Audio Clips", myFoldoutStyle);
         if (showAudioClips)
         {
@@ -80,4 +90,9 @@ public class HeroEditor : Editor
         */
     }
 
+    [DrawGizmo(GizmoType.Selected | GizmoType.NonSelected)]
+    static void DrawFacingDirection(Hero h, GizmoType gizmoType)
+    {
+        Debug.DrawLine(h.gameObject.transform.position, h.gameObject.transform.position + h.facing*h.GizmosFacingLength, h.GizmosFacingColor);
+    }
 }

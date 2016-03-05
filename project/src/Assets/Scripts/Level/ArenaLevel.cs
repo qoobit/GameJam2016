@@ -30,9 +30,18 @@ public class ArenaLevel : Level
         state = State.WARMUP; //Set arena state to WARMUP
 
         //Get the exit portal and disable it for now
-        portalEntry = GameObject.Find("Portal Entry");
-        portalExit = GameObject.Find("Portal Exit");
-        portalExit.SetActive(false);
+        for (int i = 0; i < portalList.Count; i++)
+        {
+            if (portalList[i].name == "Portal Entry")
+            {
+                portalEntry = portalList[i];
+            }
+            else if (portalList[i].name == "Portal Exit")
+            {
+                portalExit = portalList[i];
+                portalExit.SetActive(false);
+            }
+        }
     }
 
     // Update is called once per frame
