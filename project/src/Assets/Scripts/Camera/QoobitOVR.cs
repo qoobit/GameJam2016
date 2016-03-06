@@ -150,9 +150,7 @@ public class QoobitOVR : MonoBehaviour
         switch (FollowMode)
         {
             case FollowMode.DIRECT:
-                Debug.Log("B");
                 Realign(FollowObject.transform.position, Vector3.zero);
-                Debug.Log("C");
                 break;
             case FollowMode.NONE:
             default:
@@ -270,11 +268,10 @@ public class QoobitOVR : MonoBehaviour
 
         transform.position = position;
         
-        if (lookAt != null) {
+        if (lookAt != Vector3.zero) {
             GameObject temp = new GameObject();
             temp.transform.position = LookAt;
             transform.LookAt(temp.transform);
-            
             Destroy(temp);
         }
         
