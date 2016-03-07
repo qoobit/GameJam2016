@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public enum DetectionMode { RAYCAST, SPHERECAST}
 public enum HMDModel { NONE, OCULUS_RIFT_DK2, OCULUS_RIFT_DK1, HTC_VIVE_PRE, HTC_VIVE, OSVR}
-public enum FollowMode { NONE, DIRECT };
+public enum FollowMode { NONE, DIRECT, VECTOR, PATH};
 public class QoobitOVR : MonoBehaviour
 {
     public DetectionMode DetectionMode;
@@ -14,12 +14,14 @@ public class QoobitOVR : MonoBehaviour
     public Vector3 LookAt;
     public Color HighlightColor;
 
-    
     public bool SearchForObject = true;
 
     //custom camera motion variables
     public GameObject FollowObject;
     public FollowMode FollowMode;
+    public bool ConstrainTranslateX;
+    public bool ConstrainTranslateY;
+    public bool ConstrainTranslateZ;
     public Vector3 RelativePosition;
 
 
@@ -150,7 +152,7 @@ public class QoobitOVR : MonoBehaviour
         switch (FollowMode)
         {
             case FollowMode.DIRECT:
-                Realign(FollowObject.transform.position, Vector3.zero);
+                Follow(FollowObject.transform.position, Vector3.zero);
                 break;
             case FollowMode.NONE:
             default:
@@ -238,33 +240,75 @@ public class QoobitOVR : MonoBehaviour
         
     }
 
-   
-    public void Realign(Vector3 targetPosition, Vector3 forward)
+    public void Follow(Vector3 targetPosition, Vector3 forward)
     {
-        Debug.Log("A"+targetPosition+" "+forward);
-        Vector3 position;
+        Vector3 position = targetPosition;
         Vector3 lookAt = Vector3.zero;
-
-        position = targetPosition;
 
         if (forward != Vector3.zero)
         {
             position += (forward * RelativePosition.z);
-
             lookAt = position + (forward * 1000f);
             LookAt = lookAt;
-            Debug.Log("RESET");
         }
         else
         {
-            //derive forward from look at
+            //derive forward from existing look at
             Vector3 proxyForward = LookAt - transform.position;
             proxyForward.Normalize();
             position += (proxyForward * RelativePosition.z);
+
         }
+
+        if (FollowMode == FollowMode.DIRECT)
+        {
+            if (ConstrainTranslateY)
+            {
+                position.y = transform.position.y;
+            }
+            else
+            {
+                position += new Vector3(0, RelativePosition.y, 0f);
+            }
+        }
+
+
+
+        Debug.Log(targetPosition + " " + position + " " + lookAt + " " + forward);
+
+        transform.position = position;
+
+        if (lookAt != Vector3.zero)
+        {
+            GameObject temp = new GameObject();
+            temp.transform.position = LookAt;
+            transform.LookAt(temp.transform);
+            Destroy(temp);
+        }
+    }
+    public void Realign(Vector3 targetPosition, Vector3 forward)
+    {
+        Vector3 position = targetPosition;
+        Vector3 lookAt = Vector3.zero;
+
+        if (forward != Vector3.zero)
+        {
+            position += (forward * RelativePosition.z);
+            lookAt = position + (forward * 1000f);
+            LookAt = lookAt;
+        }
+        else
+        {
+            //derive forward from existing look at
+            Vector3 proxyForward = LookAt - transform.position;
+            proxyForward.Normalize();
+            position += (proxyForward * RelativePosition.z);
+            
+        }
+
         position += new Vector3(0, RelativePosition.y, 0f);
-        
-        Debug.Log(targetPosition+" "+position + " " + lookAt);
+         
+        Debug.Log(targetPosition+" "+position + " " + lookAt+" "+forward);
 
         transform.position = position;
         

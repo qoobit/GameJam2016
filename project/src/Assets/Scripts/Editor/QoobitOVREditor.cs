@@ -11,6 +11,7 @@ public class QoobitOVREditor : Editor
     protected static bool ShowReticles = true;
     protected static bool DetectAllLayers = true;
     protected static bool ShowGizmos = false;
+    protected static bool ConstrainY = false;
 
     void OnEnable()
     {
@@ -30,6 +31,20 @@ public class QoobitOVREditor : Editor
         myTarget.HmdModel = (HMDModel)EditorGUILayout.EnumPopup("Model", myTarget.HmdModel);
 
         myTarget.FollowMode = (FollowMode)EditorGUILayout.EnumPopup("Follow Mode", myTarget.FollowMode);
+        switch (myTarget.FollowMode)
+        {
+            case FollowMode.DIRECT:
+                EditorGUILayout.BeginVertical("Box");
+                EditorGUILayout.LabelField("Constraints", EditorStyles.boldLabel);
+                myTarget.ConstrainTranslateY = EditorGUILayout.Toggle("Translate Y", myTarget.ConstrainTranslateY);
+                EditorGUILayout.EndVertical();
+                break;
+            case FollowMode.VECTOR:
+                break;
+            case FollowMode.NONE:
+            default:
+                break;
+        }
         myTarget.RelativePosition = EditorGUILayout.Vector3Field("Relative Position", myTarget.RelativePosition);
 
 
